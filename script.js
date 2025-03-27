@@ -10,6 +10,27 @@ let teamsFileId = null;
 // Configuration
 const GOOGLE_DRIVE_FOLDER_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0';
 const TEAMS_FILE_NAME = 'teams.json';
+const CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com';
+
+// Initialize Google API
+async function initializeGoogleAPI() {
+    try {
+        await gapi.client.init({
+            apiKey: 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs',
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+        });
+        
+        window.tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/drive.file',
+            callback: '', // defined later
+        });
+        
+        console.log('Google API initialized successfully');
+    } catch (error) {
+        console.error('Error initializing Google API:', error);
+    }
+}
 
 // Tasks data organized by location
 const tasks = {
@@ -141,6 +162,21 @@ async function loadTeam(teamName) {
     try {
         console.log('Starting loadTeam function...');
         
+        // Ensure we have a valid token
+        if (!gapi.client.getToken()) {
+            console.log('No token found, requesting authentication...');
+            await new Promise((resolve, reject) => {
+                window.tokenClient.callback = async (resp) => {
+                    if (resp.error !== undefined) {
+                        reject(resp.error);
+                        return;
+                    }
+                    resolve();
+                };
+                window.tokenClient.requestAccessToken({prompt: ''});
+            });
+        }
+
         // Find or create teams.json file
         if (!teamsFileId) {
             console.log('Searching for teams.json file...');
@@ -186,13 +222,6 @@ async function loadTeam(teamName) {
         return teams[teamName] || { points: 0, completedTasks: [] };
     } catch (error) {
         console.error('Error in loadTeam:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            result: error.result,
-            status: error.status,
-            statusText: error.statusText
-        });
         return { points: 0, completedTasks: [] };
     }
 }
@@ -203,6 +232,21 @@ async function saveTeam(teamName, teamData) {
         console.log('Starting saveTeam function...');
         console.log('Team name:', teamName);
         console.log('Team data:', teamData);
+
+        // Ensure we have a valid token
+        if (!gapi.client.getToken()) {
+            console.log('No token found, requesting authentication...');
+            await new Promise((resolve, reject) => {
+                window.tokenClient.callback = async (resp) => {
+                    if (resp.error !== undefined) {
+                        reject(resp.error);
+                        return;
+                    }
+                    resolve();
+                };
+                window.tokenClient.requestAccessToken({prompt: ''});
+            });
+        }
 
         // Get current teams data
         console.log('Fetching current teams data...');
@@ -230,13 +274,6 @@ async function saveTeam(teamName, teamData) {
         return true;
     } catch (error) {
         console.error('Error in saveTeam:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            result: error.result,
-            status: error.status,
-            statusText: error.statusText
-        });
         alert('Failed to save team data. Please try again.');
         return false;
     }
