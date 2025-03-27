@@ -235,21 +235,6 @@ async function loadTeam(teamName) {
                 const createData = await createResponse.json();
                 teamsFileId = createData.id;
                 console.log('Created new teams file:', teamsFileId);
-                
-                // Verify the file was created
-                const verifyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?fields=id,name&key=${API_KEY}`, {
-                    headers: {
-                        'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
-                        'Referer': window.location.origin
-                    }
-                });
-                
-                if (!verifyResponse.ok) {
-                    throw new Error('Failed to verify teams file creation');
-                }
-                
-                const verifyData = await verifyResponse.json();
-                console.log('Verified teams file:', verifyData);
             }
         }
 
@@ -269,7 +254,7 @@ async function loadTeam(teamName) {
         }
         
         const teams = await response.json();
-        console.log('Teams data:', teams);
+        console.log('Teams data:', JSON.stringify(teams, null, 2));
         
         return teams[teamName] || { points: 0, completedTasks: [] };
     } catch (error) {
@@ -283,7 +268,7 @@ async function saveTeam(teamName, teamData) {
     try {
         console.log('Starting saveTeam function...');
         console.log('Team name:', teamName);
-        console.log('Team data:', teamData);
+        console.log('Team data:', JSON.stringify(teamData, null, 2));
 
         // Ensure we have a valid token
         if (!gapi.client.getToken()) {
@@ -310,19 +295,22 @@ async function saveTeam(teamName, teamData) {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to fetch current teams data');
+            const errorData = await response.json();
+            console.error('Fetch response error:', errorData);
+            throw new Error(`Failed to fetch current teams data: ${errorData.error?.message || response.statusText}`);
         }
         
         const teams = await response.json();
-        console.log('Current teams data:', teams);
+        console.log('Current teams data:', JSON.stringify(teams, null, 2));
 
         teams[teamName] = teamData;
-        console.log('Updated teams data:', teams);
+        console.log('Updated teams data:', JSON.stringify(teams, null, 2));
 
         // Update teams.json file
         console.log('Updating teams.json file...');
         const metadata = {
-            name: TEAMS_FILE_NAME
+            name: TEAMS_FILE_NAME,
+            mimeType: 'application/json'
         };
         
         const form = new FormData();
@@ -339,8 +327,13 @@ async function saveTeam(teamName, teamData) {
         });
 
         if (!updateResponse.ok) {
-            throw new Error('Failed to update teams file');
+            const errorData = await updateResponse.json();
+            console.error('Update response error:', errorData);
+            throw new Error(`Failed to update teams file: ${errorData.error?.message || updateResponse.statusText}`);
         }
+
+        const updateData = await updateResponse.json();
+        console.log('Update response:', updateData);
 
         return true;
     } catch (error) {
