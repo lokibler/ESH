@@ -5,6 +5,7 @@ let currentPhoto = null;
 let stream = null;
 let photoCanvas = null;
 let photoContext = null;
+let teamsFileId = null; // Store the teams file ID globally
 
 // Configuration
 const GOOGLE_DRIVE_FOLDER_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0';
@@ -142,26 +143,27 @@ async function loadTeam(teamName) {
             throw new Error('Google API not initialized. Please refresh the page.');
         }
 
-        // First, try to find the teams file
-        const response = await gapi.client.drive.files.list({
-            q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
-            fields: 'files(id, name)',
-            spaces: 'drive'
-        });
-
-        let teamsFileId;
-        if (response.result.files && response.result.files.length > 0) {
-            teamsFileId = response.result.files[0].id;
-        } else {
-            // Create the teams file if it doesn't exist
-            const createResponse = await gapi.client.drive.files.create({
-                resource: {
-                    name: TEAMS_FILE_NAME,
-                    parents: [GOOGLE_DRIVE_FOLDER_ID]
-                },
-                fields: 'id'
+        // If we don't have the teams file ID, find it
+        if (!teamsFileId) {
+            const response = await gapi.client.drive.files.list({
+                q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
+                fields: 'files(id, name)',
+                spaces: 'drive'
             });
-            teamsFileId = createResponse.result.id;
+
+            if (response.result.files && response.result.files.length > 0) {
+                teamsFileId = response.result.files[0].id;
+            } else {
+                // Create the teams file if it doesn't exist
+                const createResponse = await gapi.client.drive.files.create({
+                    resource: {
+                        name: TEAMS_FILE_NAME,
+                        parents: [GOOGLE_DRIVE_FOLDER_ID]
+                    },
+                    fields: 'id'
+                });
+                teamsFileId = createResponse.result.id;
+            }
         }
 
         // Get the teams data
@@ -185,26 +187,27 @@ async function saveTeam(teamName, teamData) {
             throw new Error('Google API not initialized. Please refresh the page.');
         }
 
-        // Find the teams file
-        const response = await gapi.client.drive.files.list({
-            q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
-            fields: 'files(id, name)',
-            spaces: 'drive'
-        });
-
-        let teamsFileId;
-        if (response.result.files && response.result.files.length > 0) {
-            teamsFileId = response.result.files[0].id;
-        } else {
-            // Create the teams file if it doesn't exist
-            const createResponse = await gapi.client.drive.files.create({
-                resource: {
-                    name: TEAMS_FILE_NAME,
-                    parents: [GOOGLE_DRIVE_FOLDER_ID]
-                },
-                fields: 'id'
+        // If we don't have the teams file ID, find it
+        if (!teamsFileId) {
+            const response = await gapi.client.drive.files.list({
+                q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
+                fields: 'files(id, name)',
+                spaces: 'drive'
             });
-            teamsFileId = createResponse.result.id;
+
+            if (response.result.files && response.result.files.length > 0) {
+                teamsFileId = response.result.files[0].id;
+            } else {
+                // Create the teams file if it doesn't exist
+                const createResponse = await gapi.client.drive.files.create({
+                    resource: {
+                        name: TEAMS_FILE_NAME,
+                        parents: [GOOGLE_DRIVE_FOLDER_ID]
+                    },
+                    fields: 'id'
+                });
+                teamsFileId = createResponse.result.id;
+            }
         }
 
         // Get current teams data
@@ -429,7 +432,11 @@ async function savePhoto() {
                 teamData.points += task.points;
                 teamData.completedTasks.push(currentTask);
                 
+                // Save the updated team data
                 if (await saveTeam(currentTeam, teamData)) {
+                    // Update the points display
+                    document.getElementById('team-points').textContent = teamData.points;
+                    // Return to game screen and refresh tasks
                     showGameScreen();
                     showTasks(Object.keys(tasks)[0]); // Show first location's tasks
                 }
