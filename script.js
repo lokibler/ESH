@@ -8,6 +8,7 @@ let photoContext = null;
 
 // Configuration
 const GOOGLE_DRIVE_FOLDER_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0';
+const TEAMS_FILE_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0'; // We'll create this file in the same folder
 
 // Tasks data organized by location
 const tasks = {
@@ -134,17 +135,78 @@ const tasks = {
     ]
 };
 
-// Load team data from localStorage
-function loadTeam(teamName) {
-    const teams = JSON.parse(localStorage.getItem('teams') || '{}');
-    return teams[teamName] || { points: 0, completedTasks: [] };
+// Load team data from Google Drive
+async function loadTeam(teamName) {
+    try {
+        if (!window.gapiInited || !window.gisInited) {
+            throw new Error('Google API not initialized. Please refresh the page.');
+        }
+
+        // First, try to get the teams file
+        const response = await gapi.client.drive.files.get({
+            fileId: TEAMS_FILE_ID,
+            alt: 'media'
+        });
+
+        const teams = response.body || {};
+        return teams[teamName] || { points: 0, completedTasks: [] };
+    } catch (error) {
+        console.error('Error loading team:', error);
+        return { points: 0, completedTasks: [] };
+    }
 }
 
-// Save team data to localStorage
-function saveTeam(teamName, teamData) {
-    const teams = JSON.parse(localStorage.getItem('teams') || '{}');
-    teams[teamName] = teamData;
-    localStorage.setItem('teams', JSON.stringify(teams));
+// Save team data to Google Drive
+async function saveTeam(teamName, teamData) {
+    try {
+        if (!window.gapiInited || !window.gisInited) {
+            throw new Error('Google API not initialized. Please refresh the page.');
+        }
+
+        // First, get the current teams data
+        let teams = {};
+        try {
+            const response = await gapi.client.drive.files.get({
+                fileId: TEAMS_FILE_ID,
+                alt: 'media'
+            });
+            teams = response.body || {};
+        } catch (error) {
+            // If file doesn't exist, we'll create it
+            console.log('Teams file not found, will create new one');
+        }
+
+        // Update the team data
+        teams[teamName] = teamData;
+
+        // Create or update the teams file
+        const metadata = {
+            name: 'teams.json',
+            parents: [GOOGLE_DRIVE_FOLDER_ID]
+        };
+
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', new Blob([JSON.stringify(teams)], { type: 'application/json' }));
+
+        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${gapi.client.getToken().access_token}`
+            },
+            body: form
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save team data');
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error saving team:', error);
+        alert('Failed to save team data. Please try again.');
+        return false;
+    }
 }
 
 // Show a specific screen
@@ -156,33 +218,34 @@ function showScreen(screenId) {
 }
 
 // Create a new team
-function createTeam() {
+async function createTeam() {
     const teamName = document.getElementById('team-name').value.trim();
     if (!teamName) {
         alert('Please enter a team name');
         return;
     }
 
-    const teamData = loadTeam(teamName);
+    const teamData = await loadTeam(teamName);
     if (Object.keys(teamData).length > 0) {
         alert('Team already exists!');
         return;
     }
 
-    saveTeam(teamName, { points: 0, completedTasks: [] });
-    currentTeam = teamName;
-    showGameScreen();
+    if (await saveTeam(teamName, { points: 0, completedTasks: [] })) {
+        currentTeam = teamName;
+        showGameScreen();
+    }
 }
 
 // Join an existing team
-function joinTeam() {
+async function joinTeam() {
     const teamName = document.getElementById('team-name').value.trim();
     if (!teamName) {
         alert('Please enter a team name');
         return;
     }
 
-    const teamData = loadTeam(teamName);
+    const teamData = await loadTeam(teamName);
     if (Object.keys(teamData).length === 0) {
         alert('Team not found!');
         return;
@@ -214,12 +277,12 @@ function showLocations() {
 }
 
 // Show tasks for a specific location
-function showTasks(location) {
+async function showTasks(location) {
     const taskList = document.getElementById('task-list');
     taskList.innerHTML = '';
     
     // Load the current team's data
-    const teamData = loadTeam(currentTeam);
+    const teamData = await loadTeam(currentTeam);
     console.log('Loading tasks for team:', currentTeam, 'Data:', teamData);
     
     tasks[location].forEach(task => {
@@ -279,7 +342,7 @@ async function savePhoto() {
         return;
     }
 
-    const teamData = loadTeam(currentTeam);
+    const teamData = await loadTeam(currentTeam);
     if (teamData.completedTasks.includes(currentTask)) {
         alert('Task already completed!');
         return;
@@ -331,10 +394,11 @@ async function savePhoto() {
                 
                 teamData.points += task.points;
                 teamData.completedTasks.push(currentTask);
-                saveTeam(currentTeam, teamData);
-
-                showGameScreen();
-                showTasks(Object.keys(tasks)[0]); // Show first location's tasks
+                
+                if (await saveTeam(currentTeam, teamData)) {
+                    showGameScreen();
+                    showTasks(Object.keys(tasks)[0]); // Show first location's tasks
+                }
             } catch (err) {
                 console.error('Upload error:', err);
                 alert('Error saving photo: ' + err.message);

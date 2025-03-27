@@ -9,6 +9,7 @@ A mobile-friendly web application for organizing and participating in a scavenge
 - Photo taking and uploading
 - Point tracking
 - Mobile-friendly interface
+- Real-time team data sync across devices
 
 ## Project Structure
 
@@ -16,11 +17,7 @@ A mobile-friendly web application for organizing and participating in a scavenge
 epcot-scavenger-hunt/
 ├── index.html          # Main application interface
 ├── styles.css          # Application styling
-├── script.js           # Application logic
-├── upload.php          # Backend photo upload handler
-└── data/              # JSON data files
-    ├── tasks.json     # Scavenger hunt tasks
-    └── teams.json     # Team data
+└── script.js           # Application logic
 ```
 
 ## Setup Instructions
@@ -32,20 +29,12 @@ epcot-scavenger-hunt/
 3. Select "main" branch as the source
 4. Your site will be available at `https://YOUR_USERNAME.github.io/epcot-scavenger-hunt`
 
-### Backend (PHP Server)
+### Google Drive Setup
 
-1. Sign up for a free PHP hosting account at one of these providers:
-   - [InfinityFree](https://infinityfree.com/) (Recommended)
-   - [Hostinger Free Hosting](https://www.hostinger.com/free-hosting)
-   - [x10Hosting](https://x10hosting.com/)
-
-2. Create a new website/hosting account
-
-3. Upload these files to your hosting:
-   - `upload.php`
-   - Create an `uploads` directory with write permissions (777)
-
-4. Update the `SERVER_URL` in `script.js` to point to your PHP hosting domain
+1. Create a Google Drive folder for the scavenger hunt
+2. Share the folder with appropriate access (view/edit)
+3. Update the `GOOGLE_DRIVE_FOLDER_ID` in `script.js` with your folder ID
+4. Make sure you have enabled the Google Drive API in your Google Cloud Console
 
 ## How to Use
 
@@ -60,13 +49,11 @@ epcot-scavenger-hunt/
 
 To run locally:
 1. Clone the repository
-2. Set up a local PHP server (e.g., XAMPP, MAMP)
-3. Update `SERVER_URL` in `script.js` to point to your local server
-4. Open `index.html` in a browser
+2. Open `index.html` in a browser
+3. Make sure you have access to the Google Drive folder
 
 ## Notes
 
-- Photos are stored on the PHP server
-- Team data is stored in browser localStorage
+- Team data and photos are stored in Google Drive
 - The app is optimized for mobile devices
-- Make sure your PHP hosting provider allows file uploads and has sufficient storage space 
+- All team members need to sign in with their Google account to access the app 
