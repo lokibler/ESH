@@ -288,16 +288,16 @@ async function savePhoto() {
     }
 
     try {
-        if (!gapiInited || !gisInited) {
+        if (!window.gapiInited || !window.gisInited) {
             throw new Error('Google API not initialized. Please refresh the page.');
         }
 
-        if (!tokenClient) {
+        if (!window.tokenClient) {
             throw new Error('Token client not initialized. Please refresh the page.');
         }
 
         // Request authorization
-        tokenClient.callback = async (resp) => {
+        window.tokenClient.callback = async (resp) => {
             if (resp.error !== undefined) {
                 throw new Error(resp.error);
             }
@@ -344,9 +344,9 @@ async function savePhoto() {
         };
 
         if (gapi.client.getToken() === null) {
-            tokenClient.requestAccessToken({prompt: ''});
+            window.tokenClient.requestAccessToken({prompt: ''});
         } else {
-            tokenClient.requestAccessToken({prompt: ''});
+            window.tokenClient.requestAccessToken({prompt: ''});
         }
     } catch (err) {
         console.error('Error in savePhoto:', err);
