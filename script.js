@@ -25,27 +25,35 @@ function gapiLoaded() {
 }
 
 async function initializeGapiClient() {
-    await gapi.client.init({
-        apiKey: GOOGLE_API_KEY,
-        discoveryDocs: [DISCOVERY_DOC],
-    });
-    gapiInited = true;
-    maybeEnableButtons();
+    try {
+        await gapi.client.init({
+            apiKey: GOOGLE_API_KEY,
+            discoveryDocs: [DISCOVERY_DOC],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+    } catch (err) {
+        console.error('Error initializing GAPI client:', err);
+    }
 }
 
 function gisLoaded() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: SCOPES,
-        callback: '', // defined later
-    });
-    gisInited = true;
-    maybeEnableButtons();
+    try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: SCOPES,
+            callback: '', // defined later
+        });
+        gisInited = true;
+        maybeEnableButtons();
+    } catch (err) {
+        console.error('Error initializing GIS client:', err);
+    }
 }
 
 function maybeEnableButtons() {
     if (gapiInited && gisInited) {
-        // API is ready to use
+        console.log('Google API is ready to use');
     }
 }
 
@@ -328,45 +336,59 @@ async function savePhoto() {
     }
 
     try {
+        if (!gapiInited || !gisInited) {
+            throw new Error('Google API not initialized. Please refresh the page.');
+        }
+
+        if (!tokenClient) {
+            throw new Error('Token client not initialized. Please refresh the page.');
+        }
+
         // Request authorization
         tokenClient.callback = async (resp) => {
             if (resp.error !== undefined) {
                 throw new Error(resp.error);
             }
 
-            // Upload to Google Drive
-            const metadata = {
-                name: `${currentTeam}_${currentTask}_${Date.now()}.jpg`,
-                parents: [GOOGLE_DRIVE_FOLDER_ID]
-            };
+            try {
+                // Upload to Google Drive
+                const metadata = {
+                    name: `${currentTeam}_${currentTask}_${Date.now()}.jpg`,
+                    parents: [GOOGLE_DRIVE_FOLDER_ID]
+                };
 
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', currentPhoto);
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', currentPhoto);
 
-            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${gapi.client.getToken().access_token}`
-                },
-                body: form
-            });
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${gapi.client.getToken().access_token}`
+                    },
+                    body: form
+                });
 
-            if (!response.ok) {
-                throw new Error('Failed to upload to Google Drive');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Failed to upload to Google Drive');
+                }
+
+                // Update team data
+                const task = Object.values(tasks)
+                    .flat()
+                    .find(t => t.id === currentTask);
+                
+                teamData.points += task.points;
+                teamData.completedTasks.push(currentTask);
+                saveTeam(currentTeam, teamData);
+
+                showGameScreen();
+                showTasks(Object.keys(tasks)[0]); // Show first location's tasks
+            } catch (err) {
+                console.error('Upload error:', err);
+                alert('Error saving photo: ' + err.message);
             }
-
-            // Update team data
-            const task = Object.values(tasks)
-                .flat()
-                .find(t => t.id === currentTask);
-            
-            teamData.points += task.points;
-            teamData.completedTasks.push(currentTask);
-            saveTeam(currentTeam, teamData);
-
-            showGameScreen();
-            showTasks(Object.keys(tasks)[0]); // Show first location's tasks
         };
 
         if (gapi.client.getToken() === null) {
@@ -375,8 +397,8 @@ async function savePhoto() {
             tokenClient.requestAccessToken({prompt: ''});
         }
     } catch (err) {
+        console.error('Error in savePhoto:', err);
         alert('Error saving photo: ' + err.message);
-        console.error('Upload error:', err);
     }
 }
 
