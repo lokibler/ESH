@@ -7,9 +7,9 @@ let photoCanvas = null;
 let photoContext = null;
 
 // Configuration
-const GOOGLE_DRIVE_FOLDER_ID = 'YOUR_FOLDER_ID'; // Replace with your Google Drive folder ID
-const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID'; // Replace with your Google Client ID
-const GOOGLE_API_KEY = 'YOUR_API_KEY'; // Replace with your Google API Key
+const GOOGLE_DRIVE_FOLDER_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0'; // Replace with your Google Drive folder ID
+const GOOGLE_CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com'; // Replace with your Google Client ID
+const GOOGLE_API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocsY'; // Replace with your Google API Key
 
 // Google Drive API configuration
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
