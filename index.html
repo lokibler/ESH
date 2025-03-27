@@ -75,15 +75,13 @@
     </div>
 
     <!-- Google API Scripts -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client"></script>
     <script>
-        // Initialize Google API
-        function gapiLoaded() {
+        // Define global functions before loading the API
+        window.gapiLoaded = function() {
             gapi.load('client', initializeGapiClient);
-        }
+        };
 
-        function gisLoaded() {
+        window.gisLoaded = function() {
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com',
                 scope: 'https://www.googleapis.com/auth/drive.file',
@@ -91,12 +89,10 @@
             });
             gisInited = true;
             maybeEnableButtons();
-        }
-
-        // Load the API client and auth2 library
-        gapi.load('client', gapiLoaded);
-        gapi.load('auth2', gisLoaded);
+        };
     </script>
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     <script src="script.js"></script>
 </body>
 </html> 
