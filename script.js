@@ -139,17 +139,23 @@ const tasks = {
 // Load team data from Google Drive
 async function loadTeam(teamName) {
     try {
+        console.log('Starting loadTeam function...');
+        
         // Find or create teams.json file
         if (!teamsFileId) {
+            console.log('Searching for teams.json file...');
             const response = await gapi.client.drive.files.list({
                 q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
                 fields: 'files(id, name)',
                 spaces: 'drive'
             });
+            console.log('Search response:', response);
 
             if (response.result.files && response.result.files.length > 0) {
                 teamsFileId = response.result.files[0].id;
+                console.log('Found existing teams file:', teamsFileId);
             } else {
+                console.log('Creating new teams.json file...');
                 // Create new teams.json file with empty data
                 const createResponse = await gapi.client.drive.files.create({
                     resource: {
@@ -162,19 +168,31 @@ async function loadTeam(teamName) {
                     }
                 });
                 teamsFileId = createResponse.result.id;
+                console.log('Created new teams file:', teamsFileId);
             }
         }
 
         // Get teams data
+        console.log('Fetching teams data...');
         const response = await gapi.client.drive.files.get({
             fileId: teamsFileId,
             alt: 'media'
         });
+        console.log('Teams data response:', response);
 
         const teams = response.body || {};
+        console.log('Parsed teams data:', teams);
+        
         return teams[teamName] || { points: 0, completedTasks: [] };
     } catch (error) {
-        console.error('Error loading team:', error);
+        console.error('Error in loadTeam:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            result: error.result,
+            status: error.status,
+            statusText: error.statusText
+        });
         return { points: 0, completedTasks: [] };
     }
 }
@@ -182,27 +200,43 @@ async function loadTeam(teamName) {
 // Save team data to Google Drive
 async function saveTeam(teamName, teamData) {
     try {
+        console.log('Starting saveTeam function...');
+        console.log('Team name:', teamName);
+        console.log('Team data:', teamData);
+
         // Get current teams data
+        console.log('Fetching current teams data...');
         const response = await gapi.client.drive.files.get({
             fileId: teamsFileId,
             alt: 'media'
         });
+        console.log('Current teams data:', response.body);
 
         const teams = response.body || {};
         teams[teamName] = teamData;
+        console.log('Updated teams data:', teams);
 
         // Update teams.json file
-        await gapi.client.drive.files.update({
+        console.log('Updating teams.json file...');
+        const updateResponse = await gapi.client.drive.files.update({
             fileId: teamsFileId,
             media: {
                 mimeType: 'application/json',
                 body: JSON.stringify(teams)
             }
         });
+        console.log('Update response:', updateResponse);
 
         return true;
     } catch (error) {
-        console.error('Error saving team:', error);
+        console.error('Error in saveTeam:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            result: error.result,
+            status: error.status,
+            statusText: error.statusText
+        });
         alert('Failed to save team data. Please try again.');
         return false;
     }
@@ -453,5 +487,4 @@ document.getElementById('camera-input').addEventListener('change', function(e) {
         };
         reader.readAsDataURL(file);
     }
-}); 
 }); 
