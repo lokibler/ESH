@@ -189,21 +189,15 @@ function joinTeam() {
     }
 
     currentTeam = teamName;
+    document.getElementById('team-points').textContent = teamData.points;
     showGameScreen();
 }
 
 // Show the game screen
 function showGameScreen() {
     document.getElementById('current-team').textContent = currentTeam;
-    updatePoints();
     showLocations();
     showScreen('game-screen');
-}
-
-// Update points display
-function updatePoints() {
-    const teamData = loadTeam(currentTeam);
-    document.getElementById('team-points').textContent = teamData.points;
 }
 
 // Show location buttons
@@ -224,13 +218,17 @@ function showTasks(location) {
     const taskList = document.getElementById('task-list');
     taskList.innerHTML = '';
     
+    // Load the current team's data
     const teamData = loadTeam(currentTeam);
+    console.log('Loading tasks for team:', currentTeam, 'Data:', teamData);
     
     tasks[location].forEach(task => {
         const taskElement = document.createElement('div');
         taskElement.className = 'task-item';
         
-        const isCompleted = teamData.completedTasks.includes(task.id);
+        // Check if this task is in the team's completed tasks
+        const isCompleted = teamData.completedTasks && teamData.completedTasks.includes(task.id);
+        console.log('Task:', task.id, 'Completed:', isCompleted);
         
         taskElement.innerHTML = `
             <div>
