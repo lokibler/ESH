@@ -181,12 +181,22 @@ async function loadTeam(teamName) {
         // Find or create teams.json file
         if (!teamsFileId) {
             console.log('Searching for teams.json file...');
-            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name)&key=${API_KEY}`, {
+            const searchQuery = `name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`;
+            console.log('Search query:', searchQuery);
+            
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name)&key=${API_KEY}`, {
                 headers: {
                     'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
                     'Referer': window.location.origin
                 }
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Search response error:', errorData);
+                throw new Error(`Failed to search for teams file: ${errorData.error?.message || response.statusText}`);
+            }
+            
             const data = await response.json();
             console.log('Search response:', data);
 
@@ -198,13 +208,15 @@ async function loadTeam(teamName) {
                 // Create new teams.json file with empty data
                 const metadata = {
                     name: TEAMS_FILE_NAME,
-                    parents: [GOOGLE_DRIVE_FOLDER_ID]
+                    parents: [GOOGLE_DRIVE_FOLDER_ID],
+                    mimeType: 'application/json'
                 };
                 
                 const form = new FormData();
                 form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                 form.append('file', new Blob(['{}'], { type: 'application/json' }));
 
+                console.log('Sending create request...');
                 const createResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
                     method: 'POST',
                     headers: {
@@ -215,12 +227,29 @@ async function loadTeam(teamName) {
                 });
                 
                 if (!createResponse.ok) {
-                    throw new Error('Failed to create teams file');
+                    const errorData = await createResponse.json();
+                    console.error('Create response error:', errorData);
+                    throw new Error(`Failed to create teams file: ${errorData.error?.message || createResponse.statusText}`);
                 }
                 
                 const createData = await createResponse.json();
                 teamsFileId = createData.id;
                 console.log('Created new teams file:', teamsFileId);
+                
+                // Verify the file was created
+                const verifyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?fields=id,name&key=${API_KEY}`, {
+                    headers: {
+                        'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                        'Referer': window.location.origin
+                    }
+                });
+                
+                if (!verifyResponse.ok) {
+                    throw new Error('Failed to verify teams file creation');
+                }
+                
+                const verifyData = await verifyResponse.json();
+                console.log('Verified teams file:', verifyData);
             }
         }
 
@@ -234,7 +263,9 @@ async function loadTeam(teamName) {
         });
         
         if (!response.ok) {
-            throw new Error('Failed to fetch teams data');
+            const errorData = await response.json();
+            console.error('Fetch response error:', errorData);
+            throw new Error(`Failed to fetch teams data: ${errorData.error?.message || response.statusText}`);
         }
         
         const teams = await response.json();
