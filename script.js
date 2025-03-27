@@ -262,15 +262,70 @@ async function createTeam() {
         return;
     }
 
-    const teamData = await loadTeam(teamName);
-    if (Object.keys(teamData).length > 0) {
-        alert('Team already exists!');
-        return;
-    }
+    try {
+        // First, try to find the teams file
+        if (!teamsFileId) {
+            const response = await gapi.client.drive.files.list({
+                q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
+                fields: 'files(id, name)',
+                spaces: 'drive'
+            });
 
-    if (await saveTeam(teamName, { points: 0, completedTasks: [] })) {
+            if (response.result.files && response.result.files.length > 0) {
+                teamsFileId = response.result.files[0].id;
+            } else {
+                // Create the teams file if it doesn't exist
+                const createResponse = await gapi.client.drive.files.create({
+                    resource: {
+                        name: TEAMS_FILE_NAME,
+                        parents: [GOOGLE_DRIVE_FOLDER_ID]
+                    },
+                    fields: 'id'
+                });
+                teamsFileId = createResponse.result.id;
+            }
+        }
+
+        // Get current teams data
+        let teams = {};
+        try {
+            const teamsResponse = await gapi.client.drive.files.get({
+                fileId: teamsFileId,
+                alt: 'media'
+            });
+            teams = teamsResponse.body || {};
+        } catch (error) {
+            console.log('No existing teams data, starting fresh');
+            teams = {};
+        }
+
+        // Check if team exists
+        if (teams[teamName]) {
+            alert('Team already exists!');
+            return;
+        }
+
+        // Create new team
+        teams[teamName] = { points: 0, completedTasks: [] };
+
+        // Save the updated teams data
+        const updateResponse = await gapi.client.drive.files.update({
+            fileId: teamsFileId,
+            media: {
+                mimeType: 'application/json',
+                body: JSON.stringify(teams)
+            }
+        });
+
+        if (!updateResponse.result.id) {
+            throw new Error('Failed to save team data');
+        }
+
         currentTeam = teamName;
         showGameScreen();
+    } catch (error) {
+        console.error('Error creating team:', error);
+        alert('Failed to create team. Please try again.');
     }
 }
 
@@ -282,15 +337,44 @@ async function joinTeam() {
         return;
     }
 
-    const teamData = await loadTeam(teamName);
-    if (Object.keys(teamData).length === 0) {
-        alert('Team not found!');
-        return;
-    }
+    try {
+        // First, try to find the teams file
+        if (!teamsFileId) {
+            const response = await gapi.client.drive.files.list({
+                q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
+                fields: 'files(id, name)',
+                spaces: 'drive'
+            });
 
-    currentTeam = teamName;
-    document.getElementById('team-points').textContent = teamData.points;
-    showGameScreen();
+            if (response.result.files && response.result.files.length > 0) {
+                teamsFileId = response.result.files[0].id;
+            } else {
+                alert('No teams exist yet. Please create a team first.');
+                return;
+            }
+        }
+
+        // Get current teams data
+        const teamsResponse = await gapi.client.drive.files.get({
+            fileId: teamsFileId,
+            alt: 'media'
+        });
+
+        const teams = teamsResponse.body || {};
+        
+        // Check if team exists
+        if (!teams[teamName]) {
+            alert('Team not found!');
+            return;
+        }
+
+        currentTeam = teamName;
+        document.getElementById('team-points').textContent = teams[teamName].points;
+        showGameScreen();
+    } catch (error) {
+        console.error('Error joining team:', error);
+        alert('Failed to join team. Please try again.');
+    }
 }
 
 // Show the game screen
