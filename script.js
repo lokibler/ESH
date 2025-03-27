@@ -20,10 +20,6 @@ let gapiInited = false;
 let gisInited = false;
 
 // Initialize Google API
-function gapiLoaded() {
-    gapi.load('client', initializeGapiClient);
-}
-
 async function initializeGapiClient() {
     try {
         await gapi.client.init({
