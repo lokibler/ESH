@@ -7,51 +7,7 @@ let photoCanvas = null;
 let photoContext = null;
 
 // Configuration
-const GOOGLE_DRIVE_FOLDER_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0'; // Replace with your Google Drive folder ID
-const GOOGLE_CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com'; // Replace with your Google Client ID
-const GOOGLE_API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocsY'; // Replace with your Google API Key
-
-// Google Drive API configuration
-const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
-const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-
-let tokenClient;
-let gapiInited = false;
-let gisInited = false;
-
-// Initialize Google API
-async function initializeGapiClient() {
-    try {
-        await gapi.client.init({
-            apiKey: GOOGLE_API_KEY,
-            discoveryDocs: [DISCOVERY_DOC],
-        });
-        gapiInited = true;
-        maybeEnableButtons();
-    } catch (err) {
-        console.error('Error initializing GAPI client:', err);
-    }
-}
-
-function gisLoaded() {
-    try {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: SCOPES,
-            callback: '', // defined later
-        });
-        gisInited = true;
-        maybeEnableButtons();
-    } catch (err) {
-        console.error('Error initializing GIS client:', err);
-    }
-}
-
-function maybeEnableButtons() {
-    if (gapiInited && gisInited) {
-        console.log('Google API is ready to use');
-    }
-}
+const GOOGLE_DRIVE_FOLDER_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0';
 
 // Tasks data organized by location
 const tasks = {

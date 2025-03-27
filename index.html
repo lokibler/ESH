@@ -76,19 +76,44 @@
 
     <!-- Google API Scripts -->
     <script>
+        // Global variables for Google API
+        window.tokenClient = null;
+        window.gapiInited = false;
+        window.gisInited = false;
+
+        // Initialize Google API
+        window.initializeGapiClient = async function() {
+            try {
+                await gapi.client.init({
+                    apiKey: 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocsY',
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                });
+                window.gapiInited = true;
+                window.maybeEnableButtons();
+            } catch (err) {
+                console.error('Error initializing GAPI client:', err);
+            }
+        };
+
+        window.maybeEnableButtons = function() {
+            if (window.gapiInited && window.gisInited) {
+                console.log('Google API is ready to use');
+            }
+        };
+
         // Define global functions before loading the API
         window.gapiLoaded = function() {
-            gapi.load('client', initializeGapiClient);
+            gapi.load('client', window.initializeGapiClient);
         };
 
         window.gisLoaded = function() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
+            window.tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com',
                 scope: 'https://www.googleapis.com/auth/drive.file',
                 callback: '', // defined later
             });
-            gisInited = true;
-            maybeEnableButtons();
+            window.gisInited = true;
+            window.maybeEnableButtons();
         };
     </script>
     <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
