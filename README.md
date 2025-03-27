@@ -9,7 +9,7 @@ A mobile-friendly web application for organizing and participating in a scavenge
 - Photo taking and uploading
 - Point tracking
 - Mobile-friendly interface
-- Real-time team data sync across devices
+- Real-time team data sync across devices using Google Drive
 
 ## Project Structure
 
@@ -39,11 +39,12 @@ epcot-scavenger-hunt/
 ## How to Use
 
 1. Visit the GitHub Pages URL
-2. Create or join a team
-3. View tasks by location
-4. Take photos of completed tasks
-5. Upload photos to earn points
-6. Track your team's progress
+2. Sign in with your Google account when prompted
+3. Create or join a team
+4. View tasks by location
+5. Take photos of completed tasks
+6. Upload photos to earn points
+7. Track your team's progress
 
 ## Development
 
@@ -56,4 +57,5 @@ To run locally:
 
 - Team data and photos are stored in Google Drive
 - The app is optimized for mobile devices
-- All team members need to sign in with their Google account to access the app 
+- All team members need to sign in with their Google account to access the app
+- Team data is automatically synced across all devices 

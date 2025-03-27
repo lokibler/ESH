@@ -8,7 +8,7 @@ let photoContext = null;
 
 // Configuration
 const GOOGLE_DRIVE_FOLDER_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0';
-const TEAMS_FILE_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0'; // We'll create this file in the same folder
+const TEAMS_FILE_NAME = 'teams.json';
 
 // Tasks data organized by location
 const tasks = {
@@ -142,13 +142,35 @@ async function loadTeam(teamName) {
             throw new Error('Google API not initialized. Please refresh the page.');
         }
 
-        // First, try to get the teams file
-        const response = await gapi.client.drive.files.get({
-            fileId: TEAMS_FILE_ID,
+        // First, try to find the teams file
+        const response = await gapi.client.drive.files.list({
+            q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
+            fields: 'files(id, name)',
+            spaces: 'drive'
+        });
+
+        let teamsFileId;
+        if (response.result.files && response.result.files.length > 0) {
+            teamsFileId = response.result.files[0].id;
+        } else {
+            // Create the teams file if it doesn't exist
+            const createResponse = await gapi.client.drive.files.create({
+                resource: {
+                    name: TEAMS_FILE_NAME,
+                    parents: [GOOGLE_DRIVE_FOLDER_ID]
+                },
+                fields: 'id'
+            });
+            teamsFileId = createResponse.result.id;
+        }
+
+        // Get the teams data
+        const teamsResponse = await gapi.client.drive.files.get({
+            fileId: teamsFileId,
             alt: 'media'
         });
 
-        const teams = response.body || {};
+        const teams = teamsResponse.body || {};
         return teams[teamName] || { points: 0, completedTasks: [] };
     } catch (error) {
         console.error('Error loading team:', error);
@@ -163,41 +185,53 @@ async function saveTeam(teamName, teamData) {
             throw new Error('Google API not initialized. Please refresh the page.');
         }
 
-        // First, get the current teams data
+        // Find the teams file
+        const response = await gapi.client.drive.files.list({
+            q: `name = '${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`,
+            fields: 'files(id, name)',
+            spaces: 'drive'
+        });
+
+        let teamsFileId;
+        if (response.result.files && response.result.files.length > 0) {
+            teamsFileId = response.result.files[0].id;
+        } else {
+            // Create the teams file if it doesn't exist
+            const createResponse = await gapi.client.drive.files.create({
+                resource: {
+                    name: TEAMS_FILE_NAME,
+                    parents: [GOOGLE_DRIVE_FOLDER_ID]
+                },
+                fields: 'id'
+            });
+            teamsFileId = createResponse.result.id;
+        }
+
+        // Get current teams data
         let teams = {};
         try {
-            const response = await gapi.client.drive.files.get({
-                fileId: TEAMS_FILE_ID,
+            const teamsResponse = await gapi.client.drive.files.get({
+                fileId: teamsFileId,
                 alt: 'media'
             });
-            teams = response.body || {};
+            teams = teamsResponse.body || {};
         } catch (error) {
-            // If file doesn't exist, we'll create it
-            console.log('Teams file not found, will create new one');
+            console.log('No existing teams data, starting fresh');
         }
 
         // Update the team data
         teams[teamName] = teamData;
 
-        // Create or update the teams file
-        const metadata = {
-            name: 'teams.json',
-            parents: [GOOGLE_DRIVE_FOLDER_ID]
-        };
-
-        const form = new FormData();
-        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        form.append('file', new Blob([JSON.stringify(teams)], { type: 'application/json' }));
-
-        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${gapi.client.getToken().access_token}`
-            },
-            body: form
+        // Update the teams file
+        const updateResponse = await gapi.client.drive.files.update({
+            fileId: teamsFileId,
+            media: {
+                mimeType: 'application/json',
+                body: JSON.stringify(teams)
+            }
         });
 
-        if (!response.ok) {
+        if (!updateResponse.result.id) {
             throw new Error('Failed to save team data');
         }
 
