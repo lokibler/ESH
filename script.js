@@ -8,7 +8,7 @@ let photoContext = null;
 let teamsFileId = null;
 
 // Configuration
-const GOOGLE_DRIVE_FOLDER_ID = '1qHL2vgr1rof782ER-VCm2hdyq8ElDlX0';
+const GOOGLE_DRIVE_FOLDER_ID = '1fSH2Xfeb1LT-PnpFkZE-SRDgkD-lqGRj';
 const TEAMS_FILE_NAME = 'teams.json';
 const CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs';
@@ -162,6 +162,7 @@ const tasks = {
 async function loadTeam(teamName) {
     try {
         console.log('Starting loadTeam function...');
+        console.log('Using folder ID:', GOOGLE_DRIVE_FOLDER_ID);
         
         // Ensure we have a valid token
         if (!gapi.client.getToken()) {
@@ -169,14 +170,34 @@ async function loadTeam(teamName) {
             await new Promise((resolve, reject) => {
                 window.tokenClient.callback = async (resp) => {
                     if (resp.error !== undefined) {
+                        console.error('Authentication error:', resp.error);
                         reject(resp.error);
                         return;
                     }
+                    console.log('Authentication successful');
                     resolve();
                 };
                 window.tokenClient.requestAccessToken({prompt: ''});
             });
         }
+
+        // List all files in the folder to debug
+        console.log('Listing all files in folder...');
+        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents)&key=${API_KEY}`, {
+            headers: {
+                'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                'Referer': window.location.origin
+            }
+        });
+        
+        if (!folderResponse.ok) {
+            const errorData = await folderResponse.json();
+            console.error('Folder listing error:', errorData);
+            throw new Error(`Failed to list folder contents: ${errorData.error?.message || folderResponse.statusText}`);
+        }
+        
+        const folderData = await folderResponse.json();
+        console.log('All files in folder:', JSON.stringify(folderData, null, 2));
 
         // Find or create teams.json file
         if (!teamsFileId) {
@@ -184,7 +205,7 @@ async function loadTeam(teamName) {
             const searchQuery = `name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`;
             console.log('Search query:', searchQuery);
             
-            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name)&key=${API_KEY}`, {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents)&key=${API_KEY}`, {
                 headers: {
                     'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
                     'Referer': window.location.origin
@@ -198,11 +219,12 @@ async function loadTeam(teamName) {
             }
             
             const data = await response.json();
-            console.log('Search response:', data);
+            console.log('Search response:', JSON.stringify(data, null, 2));
 
             if (data.files && data.files.length > 0) {
                 teamsFileId = data.files[0].id;
                 console.log('Found existing teams file:', teamsFileId);
+                console.log('File details:', JSON.stringify(data.files[0], null, 2));
             } else {
                 console.log('Creating new teams.json file...');
                 // Create new teams.json file with empty data
@@ -235,6 +257,24 @@ async function loadTeam(teamName) {
                 const createData = await createResponse.json();
                 teamsFileId = createData.id;
                 console.log('Created new teams file:', teamsFileId);
+                console.log('Create response:', JSON.stringify(createData, null, 2));
+
+                // Verify the file was created
+                const verifyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?fields=id,name,parents&key=${API_KEY}`, {
+                    headers: {
+                        'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                        'Referer': window.location.origin
+                    }
+                });
+                
+                if (!verifyResponse.ok) {
+                    const errorData = await verifyResponse.json();
+                    console.error('Verification error:', errorData);
+                    throw new Error(`Failed to verify file creation: ${errorData.error?.message || verifyResponse.statusText}`);
+                }
+                
+                const verifyData = await verifyResponse.json();
+                console.log('Verified teams file:', JSON.stringify(verifyData, null, 2));
             }
         }
 
@@ -259,6 +299,7 @@ async function loadTeam(teamName) {
         return teams[teamName] || { points: 0, completedTasks: [] };
     } catch (error) {
         console.error('Error in loadTeam:', error);
+        console.error('Error stack:', error.stack);
         return { points: 0, completedTasks: [] };
     }
 }
