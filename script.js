@@ -311,19 +311,6 @@ async function loadTeam(teamName) {
         let teams = await response.json();
         console.log('Raw teams data:', JSON.stringify(teams, null, 2));
 
-        // Check if the data structure is incorrect (direct team data instead of teams object)
-        if (teams.points !== undefined && teams.completedTasks !== undefined) {
-            console.log('Data structure needs to be fixed. Converting to proper format...');
-            // Convert to proper format
-            const teamData = teams;
-            teams = {};
-            if (teamName) {
-                teams[teamName] = teamData;
-            }
-        }
-        
-        console.log('Processed teams data:', JSON.stringify(teams, null, 2));
-        
         // If no team name provided, return all teams data
         if (!teamName) {
             return teams;
@@ -382,17 +369,6 @@ async function saveTeam(teamName, teamData) {
         
         let teams = await response.json();
         console.log('Current teams data:', JSON.stringify(teams, null, 2));
-
-        // Check if the data structure is incorrect (direct team data instead of teams object)
-        if (teams.points !== undefined && teams.completedTasks !== undefined) {
-            console.log('Data structure needs to be fixed. Converting to proper format...');
-            // Convert to proper format
-            const existingTeamData = teams;
-            teams = {};
-            // If we have a team name, use it, otherwise use a default name
-            const existingTeamName = teamName || 'DefaultTeam';
-            teams[existingTeamName] = existingTeamData;
-        }
 
         teams[teamName] = teamData;
         console.log('Updated teams data:', JSON.stringify(teams, null, 2));
