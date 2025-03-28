@@ -198,6 +198,7 @@ header h2 {
     border-bottom: 1px solid #eee;
     transition: background-color 0.3s ease;
     font-size: 1.1em;
+    /* gap: 20px; */
 }
 
 .task-item:hover {
@@ -208,10 +209,20 @@ header h2 {
     border-bottom: none;
 }
 
+.task-item > div {
+    flex: 1;
+    text-align: left;
+}
+
+.task-item > div:first-child {
+    margin-right: 20px;
+}
+
 .task-item button {
     padding: 12px 20px;
     font-size: 16px;
     min-height: auto;
+    /* white-space: nowrap; */
 }
 
 .camera-container {
@@ -318,10 +329,18 @@ header h2 {
     }
     
     .task-item {
-        flex-direction: column;
+        flex-direction: row;
         gap: 15px;
-        text-align: center;
+        text-align: left;
         padding: 15px;
+    }
+    
+    .task-item > div {
+        flex: 1;
+    }
+    
+    .task-item button {
+        min-width: 120px;
     }
     
     .camera-controls {
