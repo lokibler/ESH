@@ -14,6 +14,49 @@ const TEAMS_FILE_NAME = 'teams.json';
 const CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs';
 
+// Debug function to list all files in the folder
+async function listFolderContents() {
+    try {
+        console.log('Listing contents of folder:', GOOGLE_DRIVE_FOLDER_ID);
+        const token = await getValidToken();
+        
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents)&key=${API_KEY}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Referer': window.location.origin
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Folder listing error:', errorData);
+            throw new Error(`Failed to list folder contents: ${errorData.error?.message || response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('All files in folder:', JSON.stringify(data, null, 2));
+        
+        // Also try to get the teams file directly
+        console.log('Attempting to get teams file directly:', TEAMS_FILE_ID);
+        const teamsResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?fields=id,name,parents&key=${API_KEY}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Referer': window.location.origin
+            }
+        });
+        
+        if (!teamsResponse.ok) {
+            const errorData = await teamsResponse.json();
+            console.error('Teams file error:', errorData);
+        } else {
+            const teamsData = await teamsResponse.json();
+            console.log('Teams file data:', JSON.stringify(teamsData, null, 2));
+        }
+    } catch (error) {
+        console.error('Error listing folder contents:', error);
+    }
+}
+
 // Token management
 function getStoredToken() {
     const tokenData = localStorage.getItem('googleDriveToken');
@@ -47,6 +90,9 @@ async function initializeGoogleAPI() {
         });
         
         console.log('Google API initialized successfully');
+        
+        // Call the debug function after initialization
+        await listFolderContents();
     } catch (error) {
         console.error('Error initializing Google API:', error);
     }
