@@ -6,11 +6,12 @@ let currentLocation = null;
 let stream = null;
 let photoCanvas = null;
 let photoContext = null;
-let teamsFileId = null;
+let spreadsheetId = null;
 
 // Configuration
-const GOOGLE_DRIVE_FOLDER_ID = '1fSH2Xfeb1LT-PnpFkZE-SRDgkD-lqGRj';
-const TEAMS_FILE_NAME = 'teams.json';
+const SPREADSHEET_ID = '1f-sxasESzH058TjfNwaIF7b35u1RvG3AQaCFrVAFmKk'; // Replace with your spreadsheet ID
+const GOOGLE_DRIVE_FOLDER_ID = '1fSH2Xfeb1LT-PnpFkZE-SRDgkD-lqGRj'; // For storing photos
+const SHEET_NAME = 'Teams';
 const CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs';
 
@@ -37,12 +38,15 @@ async function initializeGoogleAPI() {
     try {
         await gapi.client.init({
             apiKey: API_KEY,
-            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+            discoveryDocs: [
+                'https://sheets.googleapis.com/$discovery/rest?version=v4',
+                'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+            ],
         });
         
         window.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive',
+            scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
             callback: '', // defined later
         });
         
@@ -200,144 +204,112 @@ const tasks = {
     ]
 };
 
-// Load team data from Google Drive
+// Load team data from Google Sheets
 async function loadTeam(teamName) {
     try {
         console.log('=== DEBUG: Starting loadTeam function ===');
-        console.log('Current teamsFileId:', teamsFileId);
-        console.log('Using folder ID:', GOOGLE_DRIVE_FOLDER_ID);
+        console.log('Using spreadsheet ID:', SPREADSHEET_ID);
         
         // Get valid token
         const token = await getValidToken();
         console.log('Got valid token');
-        
-        // List all files in the folder to debug
-        console.log('=== DEBUG: Listing all files in folder ===');
-        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents,permissions,owners)&key=${API_KEY}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Referer': window.location.origin
-            }
-        });
-        
-        if (!folderResponse.ok) {
-            const errorData = await folderResponse.json();
-            console.error('Folder listing error:', errorData);
-            throw new Error(`Failed to list folder contents: ${errorData.error?.message || folderResponse.statusText}`);
-        }
-        
-        const folderData = await folderResponse.json();
-        console.log('All files in folder:', JSON.stringify(folderData, null, 2));
 
-        // Find or create teams.json file
-        if (!teamsFileId) {
-            console.log('=== DEBUG: Searching for teams.json ===');
-            // Search for files owned by loganskibler@gmail.com
-            const searchQuery = `name='${TEAMS_FILE_NAME}' and 'loganskibler@gmail.com' in owners`;
-            console.log('Search query:', searchQuery);
-            
-            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents,permissions,owners)&key=${API_KEY}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Referer': window.location.origin
-                }
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Search response error:', errorData);
-                throw new Error(`Failed to search for teams file: ${errorData.error?.message || response.statusText}`);
-            }
-            
-            const searchData = await response.json();
-            console.log('Search response:', JSON.stringify(searchData, null, 2));
+        // First, check if the sheet exists and create it if it doesn't
+        if (!spreadsheetId) {
+            try {
+                // Try to access the sheet
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}?key=${API_KEY}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Referer': window.location.origin
+                    }
+                });
 
-            if (searchData.files && searchData.files.length > 0) {
-                const file = searchData.files[0];
-                teamsFileId = file.id;
-                console.log('Found existing teams file:', teamsFileId);
-                console.log('File details:', JSON.stringify(file, null, 2));
-
-                // If file is not in our folder, move it
-                if (!file.parents.includes(GOOGLE_DRIVE_FOLDER_ID)) {
-                    console.log('Moving file to correct folder...');
-                    const moveResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?fields=id,parents&key=${API_KEY}`, {
-                        method: 'PATCH',
+                if (!response.ok) {
+                    // If sheet doesn't exist, create it
+                    console.log('Creating new spreadsheet...');
+                    const createResponse = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+                        method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json',
                             'Referer': window.location.origin
                         },
                         body: JSON.stringify({
-                            parents: [GOOGLE_DRIVE_FOLDER_ID]
+                            properties: {
+                                title: 'ESH Teams'
+                            },
+                            sheets: [{
+                                properties: {
+                                    title: SHEET_NAME
+                                }
+                            }]
                         })
                     });
 
-                    if (!moveResponse.ok) {
-                        console.error('Failed to move file:', await moveResponse.json());
-                    } else {
-                        console.log('File moved successfully');
+                    if (!createResponse.ok) {
+                        throw new Error('Failed to create spreadsheet');
                     }
-                }
-            } else {
-                console.log('Creating new teams.json file...');
-                // Create new teams.json file with empty data
-                const metadata = {
-                    name: TEAMS_FILE_NAME,
-                    parents: [GOOGLE_DRIVE_FOLDER_ID],
-                    mimeType: 'application/json'
-                };
-                
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                form.append('file', new Blob(['{}'], { type: 'application/json' }));
 
-                console.log('Sending create request...');
-                const createResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Referer': window.location.origin
-                    },
-                    body: form
-                });
-                
-                if (!createResponse.ok) {
-                    const errorData = await createResponse.json();
-                    console.error('Create response error:', errorData);
-                    throw new Error(`Failed to create teams file: ${errorData.error?.message || createResponse.statusText}`);
+                    const createData = await createResponse.json();
+                    spreadsheetId = createData.spreadsheetId;
+                    
+                    // Initialize the sheet with headers
+                    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${SHEET_NAME}!A1:C1?valueInputOption=RAW&key=${API_KEY}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                            'Referer': window.location.origin
+                        },
+                        body: JSON.stringify({
+                            values: [['Team Name', 'Points', 'Completed Tasks']]
+                        })
+                    });
+                } else {
+                    spreadsheetId = SPREADSHEET_ID;
                 }
-                
-                const createData = await createResponse.json();
-                teamsFileId = createData.id;
-                console.log('Created new teams file:', teamsFileId);
-                console.log('Create response:', JSON.stringify(createData, null, 2));
+            } catch (error) {
+                console.error('Error with spreadsheet:', error);
+                throw error;
             }
         }
 
-        // Get teams data
-        console.log('Fetching teams data...');
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&key=${API_KEY}`, {
+        // Get all data from the sheet
+        const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${SHEET_NAME}!A:C?key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
             }
         });
-        
+
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Fetch response error:', errorData);
-            throw new Error(`Failed to fetch teams data: ${errorData.error?.message || response.statusText}`);
+            throw new Error('Failed to fetch sheet data');
         }
-        
-        const teams = await response.json();
+
+        const data = await response.json();
+        console.log('Sheet data:', JSON.stringify(data, null, 2));
+
+        // Convert sheet data to teams object
+        const teams = {};
+        if (data.values && data.values.length > 1) { // Skip header row
+            data.values.slice(1).forEach(row => {
+                if (row[0]) { // If team name exists
+                    teams[row[0]] = {
+                        points: parseInt(row[1]) || 0,
+                        completedTasks: row[2] ? row[2].split(',') : []
+                    };
+                }
+            });
+        }
+
         console.log('Teams data:', JSON.stringify(teams, null, 2));
-        
+
         // If no team name provided, return all teams data
         if (!teamName) {
             return teams;
         }
-        
+
         // Return specific team data or empty team data if not found
         return teams[teamName] || { points: 0, completedTasks: [] };
     } catch (error) {
@@ -347,7 +319,7 @@ async function loadTeam(teamName) {
     }
 }
 
-// Save team data to Google Drive
+// Save team data to Google Sheets
 async function saveTeam(teamName, teamData) {
     try {
         console.log('Starting saveTeam function...');
@@ -357,55 +329,55 @@ async function saveTeam(teamName, teamData) {
         // Get valid token
         const token = await getValidToken();
 
-        // Get current teams data
-        console.log('Fetching current teams data...');
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&key=${API_KEY}`, {
+        // Get current data
+        const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${SHEET_NAME}!A:C?key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
             }
         });
-        
+
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Fetch response error:', errorData);
-            throw new Error(`Failed to fetch current teams data: ${errorData.error?.message || response.statusText}`);
+            throw new Error('Failed to fetch current data');
         }
+
+        const data = await response.json();
+        let values = data.values || [['Team Name', 'Points', 'Completed Tasks']];
         
-        const teams = await response.json();
-        console.log('Current teams data:', JSON.stringify(teams, null, 2));
-
-        teams[teamName] = teamData;
-        console.log('Updated teams data:', JSON.stringify(teams, null, 2));
-
-        // Update teams.json file
-        console.log('Updating teams.json file...');
-        const metadata = {
-            name: TEAMS_FILE_NAME,
-            mimeType: 'application/json'
-        };
+        // Find if team already exists
+        const teamIndex = values.findIndex(row => row[0] === teamName);
         
-        const form = new FormData();
-        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        form.append('file', new Blob([JSON.stringify(teams)], { type: 'application/json' }));
+        // Prepare the new row
+        const newRow = [
+            teamName,
+            teamData.points.toString(),
+            teamData.completedTasks.join(',')
+        ];
 
-        const updateResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamsFileId}?uploadType=multipart`, {
-            method: 'PATCH',
+        if (teamIndex === -1) {
+            // Add new team
+            values.push(newRow);
+        } else {
+            // Update existing team
+            values[teamIndex] = newRow;
+        }
+
+        // Update the sheet
+        const updateResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${SHEET_NAME}!A:C?valueInputOption=RAW&key=${API_KEY}`, {
+            method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
                 'Referer': window.location.origin
             },
-            body: form
+            body: JSON.stringify({
+                values: values
+            })
         });
 
         if (!updateResponse.ok) {
-            const errorData = await updateResponse.json();
-            console.error('Update response error:', errorData);
-            throw new Error(`Failed to update teams file: ${errorData.error?.message || updateResponse.statusText}`);
+            throw new Error('Failed to update sheet');
         }
-
-        const updateData = await updateResponse.json();
-        console.log('Update response:', updateData);
 
         return true;
     } catch (error) {
