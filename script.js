@@ -500,6 +500,23 @@ async function showTasks(location) {
     const teamData = await loadTeam(currentTeam);
     console.log('Loading tasks for team:', currentTeam, 'Data:', teamData);
     
+    // Calculate section points
+    const sectionPoints = tasks[location].reduce((total, task) => {
+        if (teamData.completedTasks && teamData.completedTasks.includes(task.id)) {
+            return total + task.points;
+        }
+        return total;
+    }, 0);
+    
+    // Add section points display
+    const sectionHeader = document.createElement('div');
+    sectionHeader.className = 'section-header';
+    sectionHeader.innerHTML = `
+        <h3>${location}</h3>
+        <div class="section-points">Section Points: ${sectionPoints}</div>
+    `;
+    taskList.appendChild(sectionHeader);
+    
     tasks[location].forEach(task => {
         const taskElement = document.createElement('div');
         taskElement.className = 'task-item';

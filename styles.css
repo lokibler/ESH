@@ -188,4 +188,30 @@ header {
 .points-container .secondary-button {
     font-size: 0.9em;
     padding: 8px 12px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.section-points {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #28a745;
+    background-color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 } 
