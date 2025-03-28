@@ -213,7 +213,7 @@ async function loadTeam(teamName) {
         
         // List all files in the folder to debug
         console.log('=== DEBUG: Listing all files in folder ===');
-        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents,permissions)&key=${API_KEY}`, {
+        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents,permissions,owners)&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
@@ -232,10 +232,11 @@ async function loadTeam(teamName) {
         // Find or create teams.json file
         if (!teamsFileId) {
             console.log('=== DEBUG: Searching for teams.json file ===');
-            const searchQuery = `name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`;
+            // Try a more permissive search
+            const searchQuery = `name='${TEAMS_FILE_NAME}'`;
             console.log('Search query:', searchQuery);
             
-            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents,permissions)&key=${API_KEY}`, {
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents,permissions,owners)&key=${API_KEY}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Referer': window.location.origin
