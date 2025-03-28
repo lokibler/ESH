@@ -232,8 +232,8 @@ async function loadTeam(teamName) {
         // Find or create teams.json file
         if (!teamsFileId) {
             console.log('=== DEBUG: Searching for teams.json file ===');
-            // Try a more permissive search
-            const searchQuery = `name='${TEAMS_FILE_NAME}'`;
+            // Search specifically in our folder
+            const searchQuery = `name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`;
             console.log('Search query:', searchQuery);
             
             const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents,permissions,owners)&key=${API_KEY}`, {
@@ -252,10 +252,16 @@ async function loadTeam(teamName) {
             const data = await response.json();
             console.log('Search response:', JSON.stringify(data, null, 2));
 
-            if (data.files && data.files.length > 0) {
-                teamsFileId = data.files[0].id;
+            // Filter files to only include those in our folder
+            const filesInOurFolder = data.files.filter(file => 
+                file.parents && file.parents.includes(GOOGLE_DRIVE_FOLDER_ID)
+            );
+            console.log('Files in our folder:', JSON.stringify(filesInOurFolder, null, 2));
+
+            if (filesInOurFolder.length > 0) {
+                teamsFileId = filesInOurFolder[0].id;
                 console.log('Found existing teams file:', teamsFileId);
-                console.log('File details:', JSON.stringify(data.files[0], null, 2));
+                console.log('File details:', JSON.stringify(filesInOurFolder[0], null, 2));
             } else {
                 console.log('Creating new teams.json file...');
                 // Create new teams.json file with empty data
