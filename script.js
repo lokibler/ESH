@@ -13,6 +13,24 @@ const TEAMS_FILE_NAME = 'teams.json';
 const CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs';
 
+// Token management
+function getStoredToken() {
+    const tokenData = localStorage.getItem('googleDriveToken');
+    if (!tokenData) return null;
+    
+    const { token, expiresAt } = JSON.parse(tokenData);
+    if (expiresAt && Date.now() >= expiresAt) {
+        localStorage.removeItem('googleDriveToken');
+        return null;
+    }
+    return token;
+}
+
+function storeToken(token, expiresIn) {
+    const expiresAt = Date.now() + (expiresIn * 1000);
+    localStorage.setItem('googleDriveToken', JSON.stringify({ token, expiresAt }));
+}
+
 // Initialize Google API
 async function initializeGoogleAPI() {
     try {
@@ -31,6 +49,29 @@ async function initializeGoogleAPI() {
     } catch (error) {
         console.error('Error initializing Google API:', error);
     }
+}
+
+// Get a valid token
+async function getValidToken() {
+    // Check for stored token first
+    const storedToken = getStoredToken();
+    if (storedToken) {
+        return storedToken;
+    }
+
+    // If no stored token, request a new one
+    return new Promise((resolve, reject) => {
+        window.tokenClient.callback = async (resp) => {
+            if (resp.error !== undefined) {
+                reject(resp.error);
+                return;
+            }
+            // Store the new token
+            storeToken(resp.access_token, resp.expires_in);
+            resolve(resp.access_token);
+        };
+        window.tokenClient.requestAccessToken({prompt: ''});
+    });
 }
 
 // Tasks data organized by location
@@ -164,28 +205,14 @@ async function loadTeam(teamName) {
         console.log('Starting loadTeam function...');
         console.log('Using folder ID:', GOOGLE_DRIVE_FOLDER_ID);
         
-        // Ensure we have a valid token
-        if (!gapi.client.getToken()) {
-            console.log('No token found, requesting authentication...');
-            await new Promise((resolve, reject) => {
-                window.tokenClient.callback = async (resp) => {
-                    if (resp.error !== undefined) {
-                        console.error('Authentication error:', resp.error);
-                        reject(resp.error);
-                        return;
-                    }
-                    console.log('Authentication successful');
-                    resolve();
-                };
-                window.tokenClient.requestAccessToken({prompt: ''});
-            });
-        }
-
+        // Get valid token
+        const token = await getValidToken();
+        
         // List all files in the folder to debug
         console.log('Listing all files in folder...');
         const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents)&key=${API_KEY}`, {
             headers: {
-                'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
             }
         });
@@ -207,7 +234,7 @@ async function loadTeam(teamName) {
             
             const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents)&key=${API_KEY}`, {
                 headers: {
-                    'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                    'Authorization': `Bearer ${token}`,
                     'Referer': window.location.origin
                 }
             });
@@ -242,7 +269,7 @@ async function loadTeam(teamName) {
                 const createResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                        'Authorization': `Bearer ${token}`,
                         'Referer': window.location.origin
                     },
                     body: form
@@ -262,7 +289,7 @@ async function loadTeam(teamName) {
                 // Verify the file was created
                 const verifyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?fields=id,name,parents&key=${API_KEY}`, {
                     headers: {
-                        'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                        'Authorization': `Bearer ${token}`,
                         'Referer': window.location.origin
                     }
                 });
@@ -282,7 +309,7 @@ async function loadTeam(teamName) {
         console.log('Fetching teams data...');
         const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&key=${API_KEY}`, {
             headers: {
-                'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
             }
         });
@@ -311,26 +338,14 @@ async function saveTeam(teamName, teamData) {
         console.log('Team name:', teamName);
         console.log('Team data:', JSON.stringify(teamData, null, 2));
 
-        // Ensure we have a valid token
-        if (!gapi.client.getToken()) {
-            console.log('No token found, requesting authentication...');
-            await new Promise((resolve, reject) => {
-                window.tokenClient.callback = async (resp) => {
-                    if (resp.error !== undefined) {
-                        reject(resp.error);
-                        return;
-                    }
-                    resolve();
-                };
-                window.tokenClient.requestAccessToken({prompt: ''});
-            });
-        }
+        // Get valid token
+        const token = await getValidToken();
 
         // Get current teams data
         console.log('Fetching current teams data...');
         const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&key=${API_KEY}`, {
             headers: {
-                'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
             }
         });
@@ -361,7 +376,7 @@ async function saveTeam(teamName, teamData) {
         const updateResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamsFileId}?uploadType=multipart`, {
             method: 'PATCH',
             headers: {
-                'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+                'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
             },
             body: form
@@ -541,66 +556,48 @@ async function savePhoto() {
             throw new Error('Google API not initialized. Please refresh the page.');
         }
 
-        if (!window.tokenClient) {
-            throw new Error('Token client not initialized. Please refresh the page.');
-        }
+        // Get valid token
+        const token = await getValidToken();
 
-        // Request authorization
-        window.tokenClient.callback = async (resp) => {
-            if (resp.error !== undefined) {
-                throw new Error(resp.error);
-            }
-
-            try {
-                // Upload to Google Drive
-                const metadata = {
-                    name: `${currentTeam}_${currentTask}_${Date.now()}.jpg`,
-                    parents: [GOOGLE_DRIVE_FOLDER_ID]
-                };
-
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                form.append('file', currentPhoto);
-
-                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${gapi.client.getToken().access_token}`
-                    },
-                    body: form
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error?.message || 'Failed to upload to Google Drive');
-                }
-
-                // Update team data
-                const task = Object.values(tasks)
-                    .flat()
-                    .find(t => t.id === currentTask);
-                
-                teamData.points += task.points;
-                teamData.completedTasks.push(currentTask);
-                
-                // Save the updated team data
-                if (await saveTeam(currentTeam, teamData)) {
-                    // Update the points display
-                    document.getElementById('team-points').textContent = teamData.points;
-                    // Return to game screen and refresh tasks
-                    showGameScreen();
-                    showTasks(Object.keys(tasks)[0]); // Show first location's tasks
-                }
-            } catch (err) {
-                console.error('Upload error:', err);
-                alert('Error saving photo: ' + err.message);
-            }
+        // Upload to Google Drive
+        const metadata = {
+            name: `${currentTeam}_${currentTask}_${Date.now()}.jpg`,
+            parents: [GOOGLE_DRIVE_FOLDER_ID]
         };
 
-        if (gapi.client.getToken() === null) {
-            window.tokenClient.requestAccessToken({prompt: ''});
-        } else {
-            window.tokenClient.requestAccessToken({prompt: ''});
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', currentPhoto);
+
+        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Referer': window.location.origin
+            },
+            body: form
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Failed to upload to Google Drive');
+        }
+
+        // Update team data
+        const task = Object.values(tasks)
+            .flat()
+            .find(t => t.id === currentTask);
+        
+        teamData.points += task.points;
+        teamData.completedTasks.push(currentTask);
+        
+        // Save the updated team data
+        if (await saveTeam(currentTeam, teamData)) {
+            // Update the points display
+            document.getElementById('team-points').textContent = teamData.points;
+            // Return to game screen and refresh tasks
+            showGameScreen();
+            showTasks(Object.keys(tasks)[0]); // Show first location's tasks
         }
     } catch (err) {
         console.error('Error in savePhoto:', err);
