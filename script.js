@@ -517,10 +517,8 @@ async function showTasks(location) {
     const sectionHeader = document.createElement('div');
     sectionHeader.className = 'section-header';
     sectionHeader.innerHTML = `
-        <div class="section-info">
-            <h3>${location}</h3>
-            <div class="section-points">Points in this section: ${sectionPoints}</div>
-        </div>
+        <h3>${location}</h3>
+        <div class="section-points">Section Points: ${sectionPoints}</div>
     `;
     taskList.appendChild(sectionHeader);
     
