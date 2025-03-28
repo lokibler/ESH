@@ -537,7 +537,7 @@ async function showTasks(location) {
             </div>
             ${isCompleted ? 
                 '<span>✓ Completed</span>' : 
-                `<button onclick="startPhoto('${task.id}')">Take Photo</button>`
+                `<button onclick="startPhoto('${task.id}')"><span>Take</span><span>Photo</span></button>`
             }
         `;
         
