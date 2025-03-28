@@ -323,6 +323,12 @@ async function loadTeam(teamName) {
         const teams = await response.json();
         console.log('Teams data:', JSON.stringify(teams, null, 2));
         
+        // If no team name provided, return all teams data
+        if (!teamName) {
+            return teams;
+        }
+        
+        // Return specific team data or empty team data if not found
         return teams[teamName] || { points: 0, completedTasks: [] };
     } catch (error) {
         console.error('Error in loadTeam:', error);
