@@ -2,6 +2,7 @@
 let currentTeam = null;
 let currentTask = null;
 let currentPhoto = null;
+let currentLocation = null;
 let stream = null;
 let photoCanvas = null;
 let photoContext = null;
@@ -498,6 +499,7 @@ function showLocations() {
 
 // Show tasks for a specific location
 async function showTasks(location) {
+    currentLocation = location;
     const taskList = document.getElementById('task-list');
     taskList.innerHTML = '';
     
@@ -631,7 +633,7 @@ async function savePhoto() {
             document.getElementById('team-points').textContent = teamData.points;
             // Return to game screen and refresh tasks
             showGameScreen();
-            showTasks(Object.keys(tasks)[0]); // Show first location's tasks
+            showTasks(currentLocation);
         }
     } catch (err) {
         console.error('Error in savePhoto:', err);
@@ -645,7 +647,7 @@ function cancelPhoto() {
     document.getElementById('photo-preview').innerHTML = '';
     document.getElementById('camera-input').value = '';
     showGameScreen();
-    showTasks(Object.keys(tasks)[0]); // Show first location's tasks
+    showTasks(currentLocation);
 }
 
 // Set up camera input handler
