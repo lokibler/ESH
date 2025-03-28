@@ -451,10 +451,8 @@ async function joinTeam() {
 
     try {
         console.log('Attempting to join team:', teamName);
-        const teamData = await loadTeam(teamName);
-        console.log('Loaded team data:', JSON.stringify(teamData, null, 2));
         
-        // Check if team exists by looking at the actual data
+        // Load all teams data first
         const teams = await loadTeam(''); // Load all teams data
         console.log('All teams data:', JSON.stringify(teams, null, 2));
         
