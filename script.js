@@ -1,4 +1,4 @@
-// 11
+// 12
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -130,7 +130,7 @@ async function initializeGoogleAPI() {
         
         window.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive',
+            scope: 'https://www.googleapis.com/auth/drive.file',
             callback: '', // defined later
         });
         
@@ -173,7 +173,7 @@ async function joinTeam() {
         
         if (!teams || typeof teams !== 'object') {
             console.error('Invalid teams data structure:', teams);
-            alert('Error loading teams data. Please try again.');
+            alert('Error loading teams data. Please make sure you have access to the folder and try again.');
             return;
         }
         
@@ -188,7 +188,7 @@ async function joinTeam() {
         showGameScreen();
     } catch (error) {
         console.error('Error joining team:', error);
-        alert('Failed to join team. Please try again.');
+        alert('Failed to join team. Please make sure you have access to the folder and try again.');
     }
 }
 
@@ -381,6 +381,9 @@ async function loadTeam(teamName) {
         if (!response.ok) {
             const errorData = await response.json();
             console.error('Fetch response error:', errorData);
+            if (errorData.error?.message?.includes('insufficient permissions')) {
+                throw new Error('You do not have permission to access this file. Please make sure you have access to the folder.');
+            }
             throw new Error(`Failed to fetch teams data: ${errorData.error?.message || response.statusText}`);
         }
         
@@ -409,7 +412,7 @@ async function loadTeam(teamName) {
     } catch (error) {
         console.error('Error in loadTeam:', error);
         console.error('Error stack:', error.stack);
-        alert('Failed to load team data. Please make sure you are signed in and have access to the file.');
+        alert(error.message || 'Failed to load team data. Please make sure you have access to the file.');
         return { points: 0, completedTasks: [] };
     }
 }
