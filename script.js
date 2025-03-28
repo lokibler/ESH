@@ -1,4 +1,4 @@
-// 10
+// 11
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -36,6 +36,9 @@ async function listFolderContents() {
         if (!folderResponse.ok) {
             const errorData = await folderResponse.json();
             console.error('Folder check error:', errorData);
+            console.error('Folder check status:', folderResponse.status);
+            console.error('Folder check status text:', folderResponse.statusText);
+            console.error('Folder URL:', `https://drive.google.com/drive/u/0/folders/${GOOGLE_DRIVE_FOLDER_ID}`);
         } else {
             const folderData = await folderResponse.json();
             console.log('Folder data:', JSON.stringify(folderData, null, 2));
@@ -53,11 +56,12 @@ async function listFolderContents() {
         if (!response.ok) {
             const errorData = await response.json();
             console.error('Folder listing error:', errorData);
-            throw new Error(`Failed to list folder contents: ${errorData.error?.message || response.statusText}`);
+            console.error('Folder listing status:', response.status);
+            console.error('Folder listing status text:', response.statusText);
+        } else {
+            const data = await response.json();
+            console.log('All files in folder:', JSON.stringify(data, null, 2));
         }
-        
-        const data = await response.json();
-        console.log('All files in folder:', JSON.stringify(data, null, 2));
         
         // Also try to get the teams file directly
         console.log('Attempting to get teams file directly:', TEAMS_FILE_ID);
@@ -71,6 +75,9 @@ async function listFolderContents() {
         if (!teamsResponse.ok) {
             const errorData = await teamsResponse.json();
             console.error('Teams file error:', errorData);
+            console.error('Teams file status:', teamsResponse.status);
+            console.error('Teams file status text:', teamsResponse.statusText);
+            console.error('Teams file URL:', `https://drive.google.com/drive/u/0/folders/${TEAMS_FILE_ID}`);
         } else {
             const teamsData = await teamsResponse.json();
             console.log('Teams file data:', JSON.stringify(teamsData, null, 2));
