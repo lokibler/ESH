@@ -69,23 +69,6 @@ async function getValidToken() {
             }
             // Store the new token
             storeToken(resp.access_token, resp.expires_in);
-            
-            // Get user info
-            try {
-                const userResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?key=${API_KEY}`, {
-                    headers: {
-                        'Authorization': `Bearer ${resp.access_token}`,
-                        'Referer': window.location.origin
-                    }
-                });
-                if (userResponse.ok) {
-                    const userData = await userResponse.json();
-                    console.log('OAuth user email:', userData.email);
-                }
-            } catch (error) {
-                console.error('Error getting user info:', error);
-            }
-            
             resolve(resp.access_token);
         };
         window.tokenClient.requestAccessToken({prompt: ''});
