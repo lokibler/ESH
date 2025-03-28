@@ -233,7 +233,7 @@ async function loadTeam(teamName) {
         if (!teamsFileId) {
             console.log('=== DEBUG: Trying to access teams.json directly ===');
             // Try to access the known file ID first
-            const knownFileId = '1bbGWr3egSsXLE26QcRJnLPSqdCbEONup';
+            const knownFileId = '1vDganViO3aEwulH-VyD1yMc6CK58IGhH';
             try {
                 const directResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${knownFileId}?fields=id,name,parents,permissions,owners&key=${API_KEY}`, {
                     headers: {
@@ -256,7 +256,7 @@ async function loadTeam(teamName) {
                 } else {
                     console.log('Could not access file directly, falling back to search');
                     // Fall back to search if direct access fails
-                    const searchQuery = `name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`;
+                    const searchQuery = `name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents and 'loganskibler@gmail.com' in owners`;
                     console.log('Search query:', searchQuery);
                     
                     const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents,permissions,owners)&key=${API_KEY}`, {
