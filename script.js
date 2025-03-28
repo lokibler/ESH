@@ -1,4 +1,4 @@
-// 6
+// 7
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -308,8 +308,18 @@ async function loadTeam(teamName) {
             throw new Error(`Failed to fetch teams data: ${errorData.error?.message || response.statusText}`);
         }
         
-        let teams = await response.json();
-        console.log('Raw teams data:', JSON.stringify(teams, null, 2));
+        const responseText = await response.text();
+        console.log('Raw response text:', responseText);
+        
+        let teams;
+        try {
+            teams = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Error parsing JSON:', parseError);
+            throw new Error('Invalid JSON data received from server');
+        }
+        
+        console.log('Parsed teams data:', JSON.stringify(teams, null, 2));
 
         // If no team name provided, return all teams data
         if (!teamName) {
@@ -317,7 +327,9 @@ async function loadTeam(teamName) {
         }
         
         // Return specific team data or empty team data if not found
-        return teams[teamName] || { points: 0, completedTasks: [] };
+        const teamData = teams[teamName] || { points: 0, completedTasks: [] };
+        console.log('Returning team data for', teamName, ':', JSON.stringify(teamData, null, 2));
+        return teamData;
     } catch (error) {
         console.error('Error in loadTeam:', error);
         console.error('Error stack:', error.stack);
@@ -460,6 +472,12 @@ async function joinTeam() {
         // Load all teams data first
         const teams = await loadTeam(''); // Load all teams data
         console.log('All teams data:', JSON.stringify(teams, null, 2));
+        
+        if (!teams || typeof teams !== 'object') {
+            console.error('Invalid teams data structure:', teams);
+            alert('Error loading teams data. Please try again.');
+            return;
+        }
         
         if (!teams[teamName]) {
             console.log('Team not found in teams data');
