@@ -444,14 +444,22 @@ async function joinTeam() {
     }
 
     try {
+        console.log('Attempting to join team:', teamName);
         const teamData = await loadTeam(teamName);
-        if (teamData.points === 0 && teamData.completedTasks.length === 0) {
+        console.log('Loaded team data:', JSON.stringify(teamData, null, 2));
+        
+        // Check if team exists by looking at the actual data
+        const teams = await loadTeam(''); // Load all teams data
+        console.log('All teams data:', JSON.stringify(teams, null, 2));
+        
+        if (!teams[teamName]) {
+            console.log('Team not found in teams data');
             alert('Team not found!');
             return;
         }
 
         currentTeam = teamName;
-        document.getElementById('team-points').textContent = teamData.points;
+        document.getElementById('team-points').textContent = teams[teamName].points;
         showGameScreen();
     } catch (error) {
         console.error('Error joining team:', error);
