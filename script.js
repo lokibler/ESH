@@ -72,9 +72,10 @@ async function getValidToken() {
             
             // Get user info
             try {
-                const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                const userResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?key=${API_KEY}`, {
                     headers: {
-                        'Authorization': `Bearer ${resp.access_token}`
+                        'Authorization': `Bearer ${resp.access_token}`,
+                        'Referer': window.location.origin
                     }
                 });
                 if (userResponse.ok) {
