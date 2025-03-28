@@ -226,6 +226,17 @@ header h2 {
     font-size: 13px;
     min-height: auto;
     min-width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+    height: 45px;
+}
+
+.task-item button span {
+    display: block;
+    line-height: 1.2;
 }
 
 .camera-container {
@@ -338,6 +349,7 @@ header h2 {
     .task-item button {
         min-width: 70px;
         padding: 4px 8px;
+        height: 40px;
     }
     
     #location-buttons button {
