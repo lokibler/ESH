@@ -128,10 +128,11 @@ async function initializeGoogleAPI() {
         });
         
         console.log('Google API initialized successfully');
+        return true;
     } catch (error) {
         console.error('Error in initializeGoogleAPI:', error);
         console.error('Error stack:', error.stack);
-        alert('Failed to initialize Google API. Please make sure you are signed in to the correct Google account.');
+        return false;
     }
 }
 
@@ -145,6 +146,15 @@ async function joinTeam() {
 
     try {
         console.log('Attempting to join team:', teamName);
+        
+        // Initialize Google API if not already initialized
+        if (!window.gapiInited || !window.gisInited) {
+            const initialized = await initializeGoogleAPI();
+            if (!initialized) {
+                alert('Please sign in with your Google account to continue.');
+                return;
+            }
+        }
         
         // First, list the folder contents to debug
         console.log('Listing folder contents first...');
@@ -488,6 +498,15 @@ async function createTeam() {
     }
 
     try {
+        // Initialize Google API if not already initialized
+        if (!window.gapiInited || !window.gisInited) {
+            const initialized = await initializeGoogleAPI();
+            if (!initialized) {
+                alert('Please sign in with your Google account to continue.');
+                return;
+            }
+        }
+
         // Check if team exists
         const teamData = await loadTeam(teamName);
         if (teamData.points > 0 || teamData.completedTasks.length > 0) {
