@@ -6,7 +6,7 @@ let currentLocation = null;
 let stream = null;
 let photoCanvas = null;
 let photoContext = null;
-let teamsFileId = null;
+const TEAMS_FILE_ID = '1bbGWr3egSsXLE26QcRJnLPSqdCbEONup';
 
 // Configuration
 const GOOGLE_DRIVE_FOLDER_ID = '1fSH2Xfeb1LT-PnpFkZE-SRDgkD-lqGRj';
@@ -204,111 +204,13 @@ const tasks = {
 async function loadTeam(teamName) {
     try {
         console.log('Starting loadTeam function...');
-        console.log('Using folder ID:', GOOGLE_DRIVE_FOLDER_ID);
         
         // Get valid token
         const token = await getValidToken();
-        
-        // List all files in the folder to debug
-        console.log('Listing all files in folder...');
-        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents)&key=${API_KEY}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Referer': window.location.origin
-            }
-        });
-        
-        if (!folderResponse.ok) {
-            const errorData = await folderResponse.json();
-            console.error('Folder listing error:', errorData);
-            throw new Error(`Failed to list folder contents: ${errorData.error?.message || folderResponse.statusText}`);
-        }
-        
-        const folderData = await folderResponse.json();
-        console.log('All files in folder:', JSON.stringify(folderData, null, 2));
 
-        // Find or create teams.json file
-        if (!teamsFileId) {
-            console.log('Searching for teams.json file...');
-            const searchQuery = `name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`;
-            console.log('Search query:', searchQuery);
-            
-            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents)&key=${API_KEY}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Referer': window.location.origin
-                }
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Search response error:', errorData);
-                throw new Error(`Failed to search for teams file: ${errorData.error?.message || response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log('Search response:', JSON.stringify(data, null, 2));
-
-            if (data.files && data.files.length > 0) {
-                teamsFileId = data.files[0].id;
-                console.log('Found existing teams file:', teamsFileId);
-                console.log('File details:', JSON.stringify(data.files[0], null, 2));
-            } else {
-                console.log('Creating new teams.json file...');
-                // Create new teams.json file with empty data
-                const metadata = {
-                    name: TEAMS_FILE_NAME,
-                    parents: [GOOGLE_DRIVE_FOLDER_ID],
-                    mimeType: 'application/json'
-                };
-                
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                form.append('file', new Blob(['{}'], { type: 'application/json' }));
-
-                console.log('Sending create request...');
-                const createResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Referer': window.location.origin
-                    },
-                    body: form
-                });
-                
-                if (!createResponse.ok) {
-                    const errorData = await createResponse.json();
-                    console.error('Create response error:', errorData);
-                    throw new Error(`Failed to create teams file: ${errorData.error?.message || createResponse.statusText}`);
-                }
-                
-                const createData = await createResponse.json();
-                teamsFileId = createData.id;
-                console.log('Created new teams file:', teamsFileId);
-                console.log('Create response:', JSON.stringify(createData, null, 2));
-
-                // Verify the file was created
-                const verifyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?fields=id,name,parents&key=${API_KEY}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Referer': window.location.origin
-                    }
-                });
-                
-                if (!verifyResponse.ok) {
-                    const errorData = await verifyResponse.json();
-                    console.error('Verification error:', errorData);
-                    throw new Error(`Failed to verify file creation: ${errorData.error?.message || verifyResponse.statusText}`);
-                }
-                
-                const verifyData = await verifyResponse.json();
-                console.log('Verified teams file:', JSON.stringify(verifyData, null, 2));
-            }
-        }
-
-        // Get teams data
+        // Get teams data directly using the known file ID
         console.log('Fetching teams data...');
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&key=${API_KEY}`, {
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?alt=media&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
@@ -350,7 +252,7 @@ async function saveTeam(teamName, teamData) {
 
         // Get current teams data
         console.log('Fetching current teams data...');
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&key=${API_KEY}`, {
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?alt=media&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
@@ -380,7 +282,7 @@ async function saveTeam(teamName, teamData) {
         form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
         form.append('file', new Blob([JSON.stringify(teams)], { type: 'application/json' }));
 
-        const updateResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamsFileId}?uploadType=multipart`, {
+        const updateResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${TEAMS_FILE_ID}?uploadType=multipart`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `Bearer ${token}`,
