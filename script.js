@@ -521,7 +521,6 @@ async function showTasks(location) {
             <h3>${location}</h3>
             <div class="section-points">Points in this section: ${sectionPoints}</div>
         </div>
-        <div class="total-points">Total Points: ${teamData.points}</div>
     `;
     taskList.appendChild(sectionHeader);
     
