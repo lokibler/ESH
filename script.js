@@ -1,3 +1,4 @@
+// 4 
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -81,20 +82,33 @@ async function listFolderContents() {
 
 // Token management
 function getStoredToken() {
-    const tokenData = localStorage.getItem('googleDriveToken');
-    if (!tokenData) return null;
-    
-    const { token, expiresAt } = JSON.parse(tokenData);
-    if (expiresAt && Date.now() >= expiresAt) {
-        localStorage.removeItem('googleDriveToken');
-        return null;
-    }
-    return token;
+    // Always force a new token for now
+    return null;
 }
 
 function storeToken(token, expiresIn) {
     const expiresAt = Date.now() + (expiresIn * 1000);
     localStorage.setItem('googleDriveToken', JSON.stringify({ token, expiresAt }));
+}
+
+// Get a valid token
+async function getValidToken() {
+    // Always request a new token
+    return new Promise((resolve, reject) => {
+        window.tokenClient.callback = async (resp) => {
+            if (resp.error !== undefined) {
+                console.error('Token error:', resp.error);
+                reject(resp.error);
+                return;
+            }
+            console.log('Got new token');
+            // Store the new token
+            storeToken(resp.access_token, resp.expires_in);
+            resolve(resp.access_token);
+        };
+        // Force prompt to ensure we get the right account
+        window.tokenClient.requestAccessToken({prompt: 'consent'});
+    });
 }
 
 // Initialize Google API
@@ -125,30 +139,8 @@ async function initializeGoogleAPI() {
     } catch (error) {
         console.error('Error in initializeGoogleAPI:', error);
         console.error('Error stack:', error.stack);
+        alert('Failed to initialize Google API. Please make sure you are signed in to the correct Google account.');
     }
-}
-
-// Get a valid token
-async function getValidToken() {
-    // Check for stored token first
-    const storedToken = getStoredToken();
-    if (storedToken) {
-        return storedToken;
-    }
-
-    // If no stored token, request a new one
-    return new Promise((resolve, reject) => {
-        window.tokenClient.callback = async (resp) => {
-            if (resp.error !== undefined) {
-                reject(resp.error);
-                return;
-            }
-            // Store the new token
-            storeToken(resp.access_token, resp.expires_in);
-            resolve(resp.access_token);
-        };
-        window.tokenClient.requestAccessToken({prompt: ''});
-    });
 }
 
 // Tasks data organized by location
@@ -286,7 +278,22 @@ async function loadTeam(teamName) {
         const token = await getValidToken();
         console.log('Got token for loadTeam:', token.substring(0, 10) + '...');
 
-        // Get teams data directly using the known file ID
+        // First try to get the file metadata to check access
+        console.log('Checking file access...');
+        const metadataResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?fields=id,name,parents,permissions&key=${API_KEY}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Referer': window.location.origin
+            }
+        });
+        
+        if (!metadataResponse.ok) {
+            const errorData = await metadataResponse.json();
+            console.error('File access error:', errorData);
+            throw new Error(`Cannot access teams file: ${errorData.error?.message || metadataResponse.statusText}`);
+        }
+
+        // Now try to get the file contents
         console.log('Fetching teams data from file:', TEAMS_FILE_ID);
         const response = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?alt=media&key=${API_KEY}`, {
             headers: {
@@ -314,6 +321,7 @@ async function loadTeam(teamName) {
     } catch (error) {
         console.error('Error in loadTeam:', error);
         console.error('Error stack:', error.stack);
+        alert('Failed to load team data. Please make sure you are signed in and have access to the file.');
         return { points: 0, completedTasks: [] };
     }
 }
@@ -327,6 +335,22 @@ async function saveTeam(teamName, teamData) {
 
         // Get valid token
         const token = await getValidToken();
+        console.log('Got token for saveTeam:', token.substring(0, 10) + '...');
+
+        // First check if we can access the file
+        console.log('Checking file access...');
+        const metadataResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?fields=id,name,parents,permissions&key=${API_KEY}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Referer': window.location.origin
+            }
+        });
+        
+        if (!metadataResponse.ok) {
+            const errorData = await metadataResponse.json();
+            console.error('File access error:', errorData);
+            throw new Error(`Cannot access teams file: ${errorData.error?.message || metadataResponse.statusText}`);
+        }
 
         // Get current teams data
         console.log('Fetching current teams data...');
@@ -381,7 +405,7 @@ async function saveTeam(teamName, teamData) {
         return true;
     } catch (error) {
         console.error('Error in saveTeam:', error);
-        alert('Failed to save team data. Please try again.');
+        alert('Failed to save team data. Please make sure you are signed in and have access to the file.');
         return false;
     }
 }
