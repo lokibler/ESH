@@ -1,4 +1,4 @@
-// 5
+// 6
 // Global variables
 let currentTeam = null;
 let currentTask = null;
