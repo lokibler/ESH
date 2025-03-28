@@ -476,6 +476,11 @@ function showGameScreen() {
     document.getElementById('current-team').textContent = currentTeam;
     showLocations();
     showScreen('game-screen');
+    
+    // Load and display total points
+    loadTeam(currentTeam).then(teamData => {
+        document.getElementById('team-points').textContent = teamData.points;
+    });
 }
 
 // Show location buttons
@@ -512,8 +517,11 @@ async function showTasks(location) {
     const sectionHeader = document.createElement('div');
     sectionHeader.className = 'section-header';
     sectionHeader.innerHTML = `
-        <h3>${location}</h3>
-        <div class="section-points">Section Points: ${sectionPoints}</div>
+        <div class="section-info">
+            <h3>${location}</h3>
+            <div class="section-points">Points in this section: ${sectionPoints}</div>
+        </div>
+        <div class="total-points">Total Points: ${teamData.points}</div>
     `;
     taskList.appendChild(sectionHeader);
     

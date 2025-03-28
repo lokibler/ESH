@@ -195,15 +195,22 @@ header {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding: 10px;
+    padding: 15px;
     background-color: #f8f9fa;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.section-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .section-header h3 {
     margin: 0;
     color: #333;
+    font-size: 1.4em;
 }
 
 .section-points {
@@ -212,6 +219,16 @@ header {
     color: #28a745;
     background-color: white;
     padding: 8px 16px;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.total-points {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #007bff;
+    background-color: white;
+    padding: 10px 20px;
     border-radius: 6px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 } 
