@@ -2,17 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Leigh's Bachelorette Party Epcot Scavenger Hunt</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app">
         <!-- Team Selection Screen -->
         <div id="team-screen" class="screen active">
-            <h1>Leigh's Bachelorette Party Epcot Scavenger Hunt</h1>
+            <h1>🎉 Leigh's Bachelorette Party 🎉<br>Epcot Scavenger Hunt</h1>
             <div class="team-form">
-                <input type="text" id="team-name" placeholder="Enter team name">
+                <input type="text" id="team-name" placeholder="Enter your team name" autocomplete="off">
                 <button onclick="joinTeam()">Join Team</button>
                 <button onclick="createTeam()">Create New Team</button>
                 <button onclick="showScreen('rules-screen')" class="secondary-button">View Rules</button>
@@ -21,7 +22,7 @@
 
         <!-- Rules Screen -->
         <div id="rules-screen" class="screen">
-            <h2>Scavenger Hunt Rules</h2>
+            <h2>✨ Scavenger Hunt Rules ✨</h2>
             <div class="rules-content">
                 <h3>How to Play</h3>
                 <ol>
@@ -31,8 +32,8 @@
                     <li>One person from your pair must be in each picture</li>
                     <li>Earn points for each completed task</li>
                     <li>Find as many items as possible in the time limit</li>
-                    <li>Have fun exploring Epcot!</li>
-                    <li>Photos will be used for a photo book</li>
+                    <li>Have fun exploring Epcot! 🎢</li>
+                    <li>Photos will be used for a photo book 📸</li>
                 </ol>
             </div>
             <button onclick="showScreen('team-screen')" class="back-button">Back to Team Selection</button>
@@ -43,24 +44,24 @@
             <header>
                 <h2 id="current-team">Team: <span></span></h2>
                 <div class="points-container">
-                    <div class="points">Points: <span id="team-points">0</span></div>
+                    <div class="points">⭐ Points: <span id="team-points">0</span></div>
                 </div>
             </header>
 
             <div class="locations">
-                <h3>Select Location</h3>
+                <h3>🌍 Select Location</h3>
                 <div id="location-buttons"></div>
             </div>
 
             <div class="tasks">
-                <h3>Tasks</h3>
+                <h3>📝 Tasks</h3>
                 <div id="task-list"></div>
             </div>
         </div>
 
         <!-- Camera Screen -->
         <div id="camera-screen" class="screen">
-            <h3>Take Photo</h3>
+            <h3>📸 Take Photo</h3>
             <div class="camera-container">
                 <div id="photo-preview"></div>
             </div>
