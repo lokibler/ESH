@@ -1,4 +1,3 @@
-// 18
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -7,8 +6,7 @@ let currentLocation = null;
 let stream = null;
 let photoCanvas = null;
 let photoContext = null;
-let teamsFileId = '1bbGWr3egSsXLE26QcRJnLPSqdCbEONup';
-const TEAMS_FILE_ID = '1bbGWr3egSsXLE26QcRJnLPSqdCbEONup';
+let teamsFileId = null;
 
 // Configuration
 const GOOGLE_DRIVE_FOLDER_ID = '1fSH2Xfeb1LT-PnpFkZE-SRDgkD-lqGRj';
@@ -16,97 +14,17 @@ const TEAMS_FILE_NAME = 'teams.json';
 const CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs';
 
-// Debug function to list all files in the folder
-async function listFolderContents() {
-    try {
-        console.log('Starting listFolderContents...');
-        console.log('Folder ID:', GOOGLE_DRIVE_FOLDER_ID);
-        const token = await getValidToken();
-        console.log('Got token for folder listing:', token.substring(0, 10) + '...');
-        
-        // First, try to get the folder itself
-        console.log('Checking folder access...');
-        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FOLDER_ID}?fields=id,name,permissions&supportsAllDrives=true&key=${API_KEY}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Referer': window.location.origin
-            }
-        });
-        
-        if (!folderResponse.ok) {
-            const errorData = await folderResponse.json();
-            console.error('Folder access error:', errorData);
-            console.error('Folder access status:', folderResponse.status);
-            console.error('Folder access status text:', folderResponse.statusText);
-            throw new Error(`Cannot access folder: ${errorData.error?.message || folderResponse.statusText}`);
-        }
-        
-        const folderData = await folderResponse.json();
-        console.log('Folder data:', JSON.stringify(folderData, null, 2));
-        
-        // List contents with proper query
-        console.log('Listing folder contents...');
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents,permissions,owners,shared)&supportsAllDrives=true&key=${API_KEY}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Referer': window.location.origin
-            }
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Folder listing error:', errorData);
-            console.error('Folder listing status:', response.status);
-            console.error('Folder listing status text:', response.statusText);
-            throw new Error(`Failed to list folder contents: ${errorData.error?.message || response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('All files in folder:', JSON.stringify(data, null, 2));
-        
-        if (!data.files || data.files.length === 0) {
-            console.log('No files found in folder. This might mean:');
-            console.log('1. The folder is empty');
-            console.log('2. The folder ID is incorrect');
-            console.log('3. The app does not have permission to see the files');
-        }
-        
-        // Also try to find the teams file
-        console.log('Searching for teams.json file...');
-        const teamsResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents and name='${TEAMS_FILE_NAME}'&fields=files(id,name)&supportsAllDrives=true&key=${API_KEY}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Referer': window.location.origin
-            }
-        });
-        
-        if (!teamsResponse.ok) {
-            const errorData = await teamsResponse.json();
-            console.error('Teams file search error:', errorData);
-            console.error('Teams file search status:', teamsResponse.status);
-            console.error('Teams file search status text:', teamsResponse.statusText);
-        } else {
-            const teamsData = await teamsResponse.json();
-            console.log('Teams file search results:', JSON.stringify(teamsData, null, 2));
-            
-            if (!teamsData.files || teamsData.files.length === 0) {
-                console.log('No teams.json file found. Please make sure:');
-                console.log('1. The file is named exactly "teams.json" (case sensitive)');
-                console.log('2. The file is in the correct folder');
-                console.log('3. The file is shared with the correct permissions');
-            }
-        }
-    } catch (error) {
-        console.error('Error in listFolderContents:', error);
-        console.error('Error stack:', error.stack);
-        throw error;
-    }
-}
-
 // Token management
 function getStoredToken() {
-    // Always force a new token for now
-    return null;
+    const tokenData = localStorage.getItem('googleDriveToken');
+    if (!tokenData) return null;
+    
+    const { token, expiresAt } = JSON.parse(tokenData);
+    if (expiresAt && Date.now() >= expiresAt) {
+        localStorage.removeItem('googleDriveToken');
+        return null;
+    }
+    return token;
 }
 
 function storeToken(token, expiresIn) {
@@ -114,30 +32,9 @@ function storeToken(token, expiresIn) {
     localStorage.setItem('googleDriveToken', JSON.stringify({ token, expiresAt }));
 }
 
-// Get a valid token
-async function getValidToken() {
-    // Always request a new token
-    return new Promise((resolve, reject) => {
-        window.tokenClient.callback = async (resp) => {
-            if (resp.error !== undefined) {
-                console.error('Token error:', resp.error);
-                reject(resp.error);
-                return;
-            }
-            console.log('Got new token');
-            // Store the new token
-            storeToken(resp.access_token, resp.expires_in);
-            resolve(resp.access_token);
-        };
-        // Force prompt to ensure we get the right account
-        window.tokenClient.requestAccessToken({prompt: 'consent'});
-    });
-}
-
 // Initialize Google API
 async function initializeGoogleAPI() {
     try {
-        console.log('Starting Google API initialization...');
         await gapi.client.init({
             apiKey: API_KEY,
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
@@ -145,66 +42,37 @@ async function initializeGoogleAPI() {
         
         window.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive',
+            scope: 'https://www.googleapis.com/auth/drive.file',
             callback: '', // defined later
         });
         
         console.log('Google API initialized successfully');
-        return true;
     } catch (error) {
-        console.error('Error in initializeGoogleAPI:', error);
-        console.error('Error stack:', error.stack);
-        return false;
+        console.error('Error initializing Google API:', error);
     }
 }
 
-// Join an existing team
-async function joinTeam() {
-    const teamName = document.getElementById('team-name').value.trim();
-    if (!teamName) {
-        alert('Please enter a team name');
-        return;
+// Get a valid token
+async function getValidToken() {
+    // Check for stored token first
+    const storedToken = getStoredToken();
+    if (storedToken) {
+        return storedToken;
     }
 
-    try {
-        console.log('Attempting to join team:', teamName);
-        
-        // Initialize Google API if not already initialized
-        if (!window.gapiInited || !window.gisInited) {
-            const initialized = await initializeGoogleAPI();
-            if (!initialized) {
-                alert('Please sign in with your Google account to continue.');
+    // If no stored token, request a new one
+    return new Promise((resolve, reject) => {
+        window.tokenClient.callback = async (resp) => {
+            if (resp.error !== undefined) {
+                reject(resp.error);
                 return;
             }
-        }
-        
-        // First, list the folder contents to debug
-        console.log('Listing folder contents first...');
-        await listFolderContents();
-        
-        // Then load all teams data
-        const teams = await loadTeam(''); // Load all teams data
-        console.log('All teams data:', JSON.stringify(teams, null, 2));
-        
-        if (!teams || typeof teams !== 'object') {
-            console.error('Invalid teams data structure:', teams);
-            alert('Error loading teams data. Please make sure you have access to the folder and try again.');
-            return;
-        }
-        
-        if (!teams[teamName]) {
-            console.log('Team not found in teams data');
-            alert('Team not found!');
-            return;
-        }
-
-        currentTeam = teamName;
-        document.getElementById('team-points').textContent = teams[teamName].points;
-        showGameScreen();
-    } catch (error) {
-        console.error('Error joining team:', error);
-        alert('Failed to join team. Please make sure you have access to the folder and try again.');
-    }
+            // Store the new token
+            storeToken(resp.access_token, resp.expires_in);
+            resolve(resp.access_token);
+        };
+        window.tokenClient.requestAccessToken({prompt: ''});
+    });
 }
 
 // Tasks data organized by location
@@ -332,78 +200,115 @@ const tasks = {
     ]
 };
 
-// Find the teams.json file in the folder
-async function findTeamsFile() {
-    try {
-        console.log('Finding teams.json file...');
-        const token = await getValidToken();
-        
-        // First try to get the file directly by ID
-        console.log('Trying to get teams file directly by ID:', TEAMS_FILE_ID);
-        const directResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?fields=id,name&supportsAllDrives=true&key=${API_KEY}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Referer': window.location.origin
-            }
-        });
-        
-        if (directResponse.ok) {
-            const data = await directResponse.json();
-            console.log('Found teams file directly:', JSON.stringify(data, null, 2));
-            teamsFileId = data.id;
-            return teamsFileId;
-        }
-        
-        // If direct access fails, try searching in the folder
-        console.log('Direct access failed, searching in folder...');
-        const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents and name='${TEAMS_FILE_NAME}'&fields=files(id,name)&supportsAllDrives=true&key=${API_KEY}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Referer': window.location.origin
-            }
-        });
-        
-        if (!searchResponse.ok) {
-            const errorData = await searchResponse.json();
-            console.error('Error searching for teams file:', errorData);
-            throw new Error(`Failed to search for teams file: ${errorData.error?.message || searchResponse.statusText}`);
-        }
-        
-        const data = await searchResponse.json();
-        console.log('Search results:', JSON.stringify(data, null, 2));
-        
-        if (data.files && data.files.length > 0) {
-            teamsFileId = data.files[0].id;
-            console.log('Found teams.json file with ID:', teamsFileId);
-            return teamsFileId;
-        } else {
-            console.error('No teams.json file found in folder');
-            throw new Error('No teams.json file found in folder. Please make sure the file exists and you have access to it.');
-        }
-    } catch (error) {
-        console.error('Error finding teams file:', error);
-        throw error;
-    }
-}
-
 // Load team data from Google Drive
 async function loadTeam(teamName) {
     try {
         console.log('Starting loadTeam function...');
-        console.log('Team name:', teamName);
+        console.log('Using folder ID:', GOOGLE_DRIVE_FOLDER_ID);
         
         // Get valid token
         const token = await getValidToken();
-        console.log('Got token for loadTeam:', token.substring(0, 10) + '...');
+        
+        // List all files in the folder to debug
+        console.log('Listing all files in folder...');
+        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents)&key=${API_KEY}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Referer': window.location.origin
+            }
+        });
+        
+        if (!folderResponse.ok) {
+            const errorData = await folderResponse.json();
+            console.error('Folder listing error:', errorData);
+            throw new Error(`Failed to list folder contents: ${errorData.error?.message || folderResponse.statusText}`);
+        }
+        
+        const folderData = await folderResponse.json();
+        console.log('All files in folder:', JSON.stringify(folderData, null, 2));
 
-        // Find the teams file if we haven't already
+        // Find or create teams.json file
         if (!teamsFileId) {
-            await findTeamsFile();
+            console.log('Searching for teams.json file...');
+            const searchQuery = `name='${TEAMS_FILE_NAME}' and '${GOOGLE_DRIVE_FOLDER_ID}' in parents`;
+            console.log('Search query:', searchQuery);
+            
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(searchQuery)}&fields=files(id,name,parents)&key=${API_KEY}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Referer': window.location.origin
+                }
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Search response error:', errorData);
+                throw new Error(`Failed to search for teams file: ${errorData.error?.message || response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('Search response:', JSON.stringify(data, null, 2));
+
+            if (data.files && data.files.length > 0) {
+                teamsFileId = data.files[0].id;
+                console.log('Found existing teams file:', teamsFileId);
+                console.log('File details:', JSON.stringify(data.files[0], null, 2));
+            } else {
+                console.log('Creating new teams.json file...');
+                // Create new teams.json file with empty data
+                const metadata = {
+                    name: TEAMS_FILE_NAME,
+                    parents: [GOOGLE_DRIVE_FOLDER_ID],
+                    mimeType: 'application/json'
+                };
+                
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', new Blob(['{}'], { type: 'application/json' }));
+
+                console.log('Sending create request...');
+                const createResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Referer': window.location.origin
+                    },
+                    body: form
+                });
+                
+                if (!createResponse.ok) {
+                    const errorData = await createResponse.json();
+                    console.error('Create response error:', errorData);
+                    throw new Error(`Failed to create teams file: ${errorData.error?.message || createResponse.statusText}`);
+                }
+                
+                const createData = await createResponse.json();
+                teamsFileId = createData.id;
+                console.log('Created new teams file:', teamsFileId);
+                console.log('Create response:', JSON.stringify(createData, null, 2));
+
+                // Verify the file was created
+                const verifyResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?fields=id,name,parents&key=${API_KEY}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Referer': window.location.origin
+                    }
+                });
+                
+                if (!verifyResponse.ok) {
+                    const errorData = await verifyResponse.json();
+                    console.error('Verification error:', errorData);
+                    throw new Error(`Failed to verify file creation: ${errorData.error?.message || verifyResponse.statusText}`);
+                }
+                
+                const verifyData = await verifyResponse.json();
+                console.log('Verified teams file:', JSON.stringify(verifyData, null, 2));
+            }
         }
 
-        // Now try to get the file contents
-        console.log('Fetching teams data from file:', teamsFileId);
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&supportsAllDrives=true&key=${API_KEY}`, {
+        // Get teams data
+        console.log('Fetching teams data...');
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
@@ -413,44 +318,22 @@ async function loadTeam(teamName) {
         if (!response.ok) {
             const errorData = await response.json();
             console.error('Fetch response error:', errorData);
-            console.error('Response status:', response.status);
-            console.error('Response status text:', response.statusText);
-            
-            if (errorData.error?.message?.includes('notFound')) {
-                throw new Error('File not found. Please make sure the teams.json file exists in the folder and you have access to it.');
-            }
-            if (errorData.error?.message?.includes('insufficient permissions')) {
-                throw new Error('You do not have permission to access this file. Please make sure you have access to the folder.');
-            }
             throw new Error(`Failed to fetch teams data: ${errorData.error?.message || response.statusText}`);
         }
         
-        const responseText = await response.text();
-        console.log('Raw response text:', responseText);
+        const teams = await response.json();
+        console.log('Teams data:', JSON.stringify(teams, null, 2));
         
-        let teams;
-        try {
-            teams = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('Error parsing JSON:', parseError);
-            throw new Error('Invalid JSON data received from server');
-        }
-        
-        console.log('Parsed teams data:', JSON.stringify(teams, null, 2));
-
         // If no team name provided, return all teams data
         if (!teamName) {
             return teams;
         }
         
         // Return specific team data or empty team data if not found
-        const teamData = teams[teamName] || { points: 0, completedTasks: [] };
-        console.log('Returning team data for', teamName, ':', JSON.stringify(teamData, null, 2));
-        return teamData;
+        return teams[teamName] || { points: 0, completedTasks: [] };
     } catch (error) {
         console.error('Error in loadTeam:', error);
         console.error('Error stack:', error.stack);
-        alert(error.message || 'Failed to load team data. Please make sure you have access to the file.');
         return { points: 0, completedTasks: [] };
     }
 }
@@ -464,16 +347,10 @@ async function saveTeam(teamName, teamData) {
 
         // Get valid token
         const token = await getValidToken();
-        console.log('Got token for saveTeam:', token.substring(0, 10) + '...');
-
-        // Find the teams file if we haven't already
-        if (!teamsFileId) {
-            await findTeamsFile();
-        }
 
         // Get current teams data
         console.log('Fetching current teams data...');
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&supportsAllDrives=true&key=${API_KEY}`, {
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${teamsFileId}?alt=media&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
@@ -486,7 +363,7 @@ async function saveTeam(teamName, teamData) {
             throw new Error(`Failed to fetch current teams data: ${errorData.error?.message || response.statusText}`);
         }
         
-        let teams = await response.json();
+        const teams = await response.json();
         console.log('Current teams data:', JSON.stringify(teams, null, 2));
 
         teams[teamName] = teamData;
@@ -503,7 +380,7 @@ async function saveTeam(teamName, teamData) {
         form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
         form.append('file', new Blob([JSON.stringify(teams)], { type: 'application/json' }));
 
-        const updateResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamsFileId}?uploadType=multipart&supportsAllDrives=true&key=${API_KEY}`, {
+        const updateResponse = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${teamsFileId}?uploadType=multipart`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -524,7 +401,7 @@ async function saveTeam(teamName, teamData) {
         return true;
     } catch (error) {
         console.error('Error in saveTeam:', error);
-        alert('Failed to save team data. Please make sure you are signed in and have access to the file.');
+        alert('Failed to save team data. Please try again.');
         return false;
     }
 }
@@ -546,15 +423,6 @@ async function createTeam() {
     }
 
     try {
-        // Initialize Google API if not already initialized
-        if (!window.gapiInited || !window.gisInited) {
-            const initialized = await initializeGoogleAPI();
-            if (!initialized) {
-                alert('Please sign in with your Google account to continue.');
-                return;
-            }
-        }
-
         // Check if team exists
         const teamData = await loadTeam(teamName);
         if (teamData.points > 0 || teamData.completedTasks.length > 0) {
@@ -571,6 +439,36 @@ async function createTeam() {
     } catch (error) {
         console.error('Error creating team:', error);
         alert('Failed to create team. Please try again.');
+    }
+}
+
+// Join an existing team
+async function joinTeam() {
+    const teamName = document.getElementById('team-name').value.trim();
+    if (!teamName) {
+        alert('Please enter a team name');
+        return;
+    }
+
+    try {
+        console.log('Attempting to join team:', teamName);
+        
+        // Load all teams data first
+        const teams = await loadTeam(''); // Load all teams data
+        console.log('All teams data:', JSON.stringify(teams, null, 2));
+        
+        if (!teams[teamName]) {
+            console.log('Team not found in teams data');
+            alert('Team not found!');
+            return;
+        }
+
+        currentTeam = teamName;
+        document.getElementById('team-points').textContent = teams[teamName].points;
+        showGameScreen();
+    } catch (error) {
+        console.error('Error joining team:', error);
+        alert('Failed to join team. Please try again.');
     }
 }
 
