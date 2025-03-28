@@ -1,4 +1,4 @@
-// 14
+// 15
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -145,7 +145,7 @@ async function initializeGoogleAPI() {
         
         window.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.file',
+            scope: 'https://www.googleapis.com/auth/drive',
             callback: '', // defined later
         });
         
