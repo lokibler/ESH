@@ -17,9 +17,30 @@ const API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs';
 // Debug function to list all files in the folder
 async function listFolderContents() {
     try {
-        console.log('Listing contents of folder:', GOOGLE_DRIVE_FOLDER_ID);
+        console.log('Starting listFolderContents...');
+        console.log('Folder ID:', GOOGLE_DRIVE_FOLDER_ID);
         const token = await getValidToken();
+        console.log('Got token for folder listing:', token.substring(0, 10) + '...');
         
+        // First try to get the folder itself
+        console.log('Checking if folder exists...');
+        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FOLDER_ID}?fields=id,name,parents&key=${API_KEY}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Referer': window.location.origin
+            }
+        });
+        
+        if (!folderResponse.ok) {
+            const errorData = await folderResponse.json();
+            console.error('Folder check error:', errorData);
+        } else {
+            const folderData = await folderResponse.json();
+            console.log('Folder data:', JSON.stringify(folderData, null, 2));
+        }
+        
+        // Now try to list contents
+        console.log('Listing folder contents...');
         const response = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents)&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -53,7 +74,8 @@ async function listFolderContents() {
             console.log('Teams file data:', JSON.stringify(teamsData, null, 2));
         }
     } catch (error) {
-        console.error('Error listing folder contents:', error);
+        console.error('Error in listFolderContents:', error);
+        console.error('Error stack:', error.stack);
     }
 }
 
@@ -78,6 +100,7 @@ function storeToken(token, expiresIn) {
 // Initialize Google API
 async function initializeGoogleAPI() {
     try {
+        console.log('Starting Google API initialization...');
         await gapi.client.init({
             apiKey: API_KEY,
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
@@ -91,10 +114,17 @@ async function initializeGoogleAPI() {
         
         console.log('Google API initialized successfully');
         
+        // Get a token first
+        console.log('Getting initial token...');
+        const token = await getValidToken();
+        console.log('Got token:', token.substring(0, 10) + '...');
+        
         // Call the debug function after initialization
+        console.log('Calling listFolderContents...');
         await listFolderContents();
     } catch (error) {
-        console.error('Error initializing Google API:', error);
+        console.error('Error in initializeGoogleAPI:', error);
+        console.error('Error stack:', error.stack);
     }
 }
 
@@ -250,12 +280,14 @@ const tasks = {
 async function loadTeam(teamName) {
     try {
         console.log('Starting loadTeam function...');
+        console.log('Team name:', teamName);
         
         // Get valid token
         const token = await getValidToken();
+        console.log('Got token for loadTeam:', token.substring(0, 10) + '...');
 
         // Get teams data directly using the known file ID
-        console.log('Fetching teams data...');
+        console.log('Fetching teams data from file:', TEAMS_FILE_ID);
         const response = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?alt=media&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
