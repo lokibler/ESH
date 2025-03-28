@@ -14,7 +14,7 @@ body {
 #app {
     max-width: 100%;
     margin: 0 auto;
-    padding: 15px;
+    padding: 20px;
 }
 
 .screen {
@@ -28,35 +28,46 @@ body {
 
 h1, h2, h3 {
     color: #1a237e;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
     text-align: center;
     font-family: 'Disney', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 h1 {
-    font-size: 1.8em;
+    font-size: 2em;
     color: #e91e63;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 25px;
+    margin-bottom: 30px;
+    line-height: 1.3;
+}
+
+h2 {
+    font-size: 1.8em;
+    margin-bottom: 30px;
+}
+
+h3 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
 }
 
 .team-form {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 15px;
     max-width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 25px;
     background: white;
-    border-radius: 15px;
+    border-radius: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 input, button {
-    padding: 15px;
+    padding: 18px;
     border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    font-size: 16px;
+    border-radius: 15px;
+    font-size: 18px;
     transition: all 0.3s ease;
 }
 
@@ -80,6 +91,7 @@ button {
     text-transform: uppercase;
     letter-spacing: 1px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    min-height: 60px;
 }
 
 button:hover {
@@ -99,9 +111,9 @@ button:hover {
 
 .back-button {
     display: block;
-    margin: 20px auto;
+    margin: 30px auto;
     background: linear-gradient(45deg, #607d8b, #455a64);
-    max-width: 200px;
+    max-width: 250px;
 }
 
 .back-button:hover {
@@ -110,59 +122,68 @@ button:hover {
 
 .rules-content {
     background: white;
-    padding: 20px;
-    border-radius: 15px;
+    padding: 25px;
+    border-radius: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
+    margin-bottom: 30px;
 }
 
 .rules-content h3 {
     color: #e91e63;
-    margin: 20px 0 10px;
+    margin: 25px 0 15px;
     text-align: left;
-    font-size: 1.4em;
+    font-size: 1.6em;
 }
 
 .rules-content ol, .rules-content ul {
-    margin-left: 20px;
-    margin-bottom: 15px;
+    margin-left: 25px;
+    margin-bottom: 20px;
 }
 
 .rules-content li {
-    margin-bottom: 12px;
-    line-height: 1.6;
+    margin-bottom: 15px;
+    line-height: 1.8;
+    font-size: 1.1em;
 }
 
 header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 15px;
+    margin-bottom: 30px;
+    padding: 20px;
     background: white;
-    border-radius: 15px;
+    border-radius: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+header h2 {
+    margin: 0;
+    font-size: 1.6em;
 }
 
 .locations, .tasks {
     background: white;
-    padding: 20px;
-    border-radius: 15px;
-    margin-bottom: 20px;
+    padding: 25px;
+    border-radius: 20px;
+    margin-bottom: 30px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 #location-buttons {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin-top: 15px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
 }
 
 #location-buttons button {
     background: linear-gradient(45deg, #4caf50, #388e3c);
-    padding: 12px;
-    font-size: 14px;
+    padding: 15px;
+    font-size: 16px;
+    min-height: 80px;
+    white-space: normal;
+    line-height: 1.4;
 }
 
 #location-buttons button:hover {
@@ -173,9 +194,10 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
+    padding: 20px;
     border-bottom: 1px solid #eee;
     transition: background-color 0.3s ease;
+    font-size: 1.1em;
 }
 
 .task-item:hover {
@@ -186,13 +208,19 @@ header {
     border-bottom: none;
 }
 
+.task-item button {
+    padding: 12px 20px;
+    font-size: 16px;
+    min-height: auto;
+}
+
 .camera-container {
     width: 100%;
     max-width: 100%;
     margin: 0 auto;
     aspect-ratio: 4/3;
     background-color: #000;
-    border-radius: 15px;
+    border-radius: 20px;
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -219,19 +247,24 @@ header {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px;
-    margin-top: 20px;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.camera-controls button {
+    min-width: 150px;
+    padding: 15px 25px;
 }
 
 .points-container {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 10px;
+    gap: 15px;
 }
 
 .points {
-    font-size: 1.4em;
+    font-size: 1.6em;
     font-weight: bold;
     color: #4caf50;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
@@ -241,44 +274,54 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 15px;
+    margin-bottom: 25px;
+    padding: 20px;
     background: linear-gradient(45deg, #f3e5f5, #e1bee7);
-    border-radius: 15px;
+    border-radius: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .section-header h3 {
     margin: 0;
     color: #6a1b9a;
-    font-size: 1.4em;
+    font-size: 1.6em;
 }
 
 .section-points {
-    font-size: 1.2em;
+    font-size: 1.4em;
     font-weight: bold;
     color: #4caf50;
     background: white;
-    padding: 8px 16px;
-    border-radius: 12px;
+    padding: 12px 24px;
+    border-radius: 15px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 @media (max-width: 480px) {
     h1 {
+        font-size: 1.8em;
+    }
+    
+    h2 {
         font-size: 1.5em;
+    }
+    
+    h3 {
+        font-size: 1.3em;
     }
     
     .section-header {
         flex-direction: column;
-        gap: 10px;
+        gap: 15px;
         text-align: center;
+        padding: 15px;
     }
     
     .task-item {
         flex-direction: column;
-        gap: 10px;
+        gap: 15px;
         text-align: center;
+        padding: 15px;
     }
     
     .camera-controls {
@@ -287,5 +330,10 @@ header {
     
     .camera-controls button {
         width: 100%;
+        min-width: 100%;
+    }
+    
+    #location-buttons button {
+        min-height: 70px;
     }
 }
