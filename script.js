@@ -1,4 +1,4 @@
-// 8
+// 9
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -7,6 +7,7 @@ let currentLocation = null;
 let stream = null;
 let photoCanvas = null;
 let photoContext = null;
+let teamsFileId = '1bbGWr3egSsXLE26QcRJnLPSqdCbEONup';
 const TEAMS_FILE_ID = '1bbGWr3egSsXLE26QcRJnLPSqdCbEONup';
 
 // Configuration
@@ -142,6 +143,12 @@ async function initializeGoogleAPI() {
         alert('Failed to initialize Google API. Please make sure you are signed in to the correct Google account.');
     }
 }
+
+// Call initializeGoogleAPI when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, initializing Google API...');
+    initializeGoogleAPI();
+});
 
 // Tasks data organized by location
 const tasks = {
