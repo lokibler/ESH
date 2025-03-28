@@ -1,4 +1,4 @@
-// 16
+// 17
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -24,9 +24,9 @@ async function listFolderContents() {
         const token = await getValidToken();
         console.log('Got token for folder listing:', token.substring(0, 10) + '...');
         
-        // First, try to get the folder itself with proper shared drive support
+        // First, try to get the folder itself
         console.log('Checking folder access...');
-        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FOLDER_ID}?fields=id,name,permissions&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=all&key=${API_KEY}`, {
+        const folderResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FOLDER_ID}?fields=id,name,permissions&supportsAllDrives=true&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
@@ -44,9 +44,9 @@ async function listFolderContents() {
         const folderData = await folderResponse.json();
         console.log('Folder data:', JSON.stringify(folderData, null, 2));
         
-        // List contents with proper shared drive support
+        // List contents with proper query
         console.log('Listing folder contents...');
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents,permissions,owners,shared)&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=all&key=${API_KEY}`, {
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents&fields=files(id,name,parents,permissions,owners,shared)&supportsAllDrives=true&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
@@ -71,9 +71,9 @@ async function listFolderContents() {
             console.log('3. The app does not have permission to see the files');
         }
         
-        // Also try to find the teams file with proper shared drive support
+        // Also try to find the teams file
         console.log('Searching for teams.json file...');
-        const teamsResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents and name='${TEAMS_FILE_NAME}'&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=all&key=${API_KEY}`, {
+        const teamsResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents and name='${TEAMS_FILE_NAME}'&fields=files(id,name)&supportsAllDrives=true&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
