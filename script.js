@@ -1,4 +1,4 @@
-// 17
+// 18
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -338,21 +338,38 @@ async function findTeamsFile() {
         console.log('Finding teams.json file...');
         const token = await getValidToken();
         
-        // Search for the teams.json file in the folder
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents and name='${TEAMS_FILE_NAME}'&fields=files(id,name)&supportsAllDrives=true&key=${API_KEY}`, {
+        // First try to get the file directly by ID
+        console.log('Trying to get teams file directly by ID:', TEAMS_FILE_ID);
+        const directResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${TEAMS_FILE_ID}?fields=id,name&supportsAllDrives=true&key=${API_KEY}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Referer': window.location.origin
             }
         });
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Error searching for teams file:', errorData);
-            throw new Error(`Failed to search for teams file: ${errorData.error?.message || response.statusText}`);
+        if (directResponse.ok) {
+            const data = await directResponse.json();
+            console.log('Found teams file directly:', JSON.stringify(data, null, 2));
+            teamsFileId = data.id;
+            return teamsFileId;
         }
         
-        const data = await response.json();
+        // If direct access fails, try searching in the folder
+        console.log('Direct access failed, searching in folder...');
+        const searchResponse = await fetch(`https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}' in parents and name='${TEAMS_FILE_NAME}'&fields=files(id,name)&supportsAllDrives=true&key=${API_KEY}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Referer': window.location.origin
+            }
+        });
+        
+        if (!searchResponse.ok) {
+            const errorData = await searchResponse.json();
+            console.error('Error searching for teams file:', errorData);
+            throw new Error(`Failed to search for teams file: ${errorData.error?.message || searchResponse.statusText}`);
+        }
+        
+        const data = await searchResponse.json();
         console.log('Search results:', JSON.stringify(data, null, 2));
         
         if (data.files && data.files.length > 0) {
@@ -396,6 +413,9 @@ async function loadTeam(teamName) {
         if (!response.ok) {
             const errorData = await response.json();
             console.error('Fetch response error:', errorData);
+            console.error('Response status:', response.status);
+            console.error('Response status text:', response.statusText);
+            
             if (errorData.error?.message?.includes('notFound')) {
                 throw new Error('File not found. Please make sure the teams.json file exists in the folder and you have access to it.');
             }
