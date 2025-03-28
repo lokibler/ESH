@@ -1,4 +1,4 @@
-// 9
+// 10
 // Global variables
 let currentTeam = null;
 let currentTask = null;
@@ -128,15 +128,6 @@ async function initializeGoogleAPI() {
         });
         
         console.log('Google API initialized successfully');
-        
-        // Get a token first
-        console.log('Getting initial token...');
-        const token = await getValidToken();
-        console.log('Got token:', token.substring(0, 10) + '...');
-        
-        // Call the debug function after initialization
-        console.log('Calling listFolderContents...');
-        await listFolderContents();
     } catch (error) {
         console.error('Error in initializeGoogleAPI:', error);
         console.error('Error stack:', error.stack);
@@ -144,11 +135,45 @@ async function initializeGoogleAPI() {
     }
 }
 
-// Call initializeGoogleAPI when the page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, initializing Google API...');
-    initializeGoogleAPI();
-});
+// Join an existing team
+async function joinTeam() {
+    const teamName = document.getElementById('team-name').value.trim();
+    if (!teamName) {
+        alert('Please enter a team name');
+        return;
+    }
+
+    try {
+        console.log('Attempting to join team:', teamName);
+        
+        // First, list the folder contents to debug
+        console.log('Listing folder contents first...');
+        await listFolderContents();
+        
+        // Then load all teams data
+        const teams = await loadTeam(''); // Load all teams data
+        console.log('All teams data:', JSON.stringify(teams, null, 2));
+        
+        if (!teams || typeof teams !== 'object') {
+            console.error('Invalid teams data structure:', teams);
+            alert('Error loading teams data. Please try again.');
+            return;
+        }
+        
+        if (!teams[teamName]) {
+            console.log('Team not found in teams data');
+            alert('Team not found!');
+            return;
+        }
+
+        currentTeam = teamName;
+        document.getElementById('team-points').textContent = teams[teamName].points;
+        showGameScreen();
+    } catch (error) {
+        console.error('Error joining team:', error);
+        alert('Failed to join team. Please try again.');
+    }
+}
 
 // Tasks data organized by location
 const tasks = {
@@ -479,42 +504,6 @@ async function createTeam() {
     } catch (error) {
         console.error('Error creating team:', error);
         alert('Failed to create team. Please try again.');
-    }
-}
-
-// Join an existing team
-async function joinTeam() {
-    const teamName = document.getElementById('team-name').value.trim();
-    if (!teamName) {
-        alert('Please enter a team name');
-        return;
-    }
-
-    try {
-        console.log('Attempting to join team:', teamName);
-        
-        // Load all teams data first
-        const teams = await loadTeam(''); // Load all teams data
-        console.log('All teams data:', JSON.stringify(teams, null, 2));
-        
-        if (!teams || typeof teams !== 'object') {
-            console.error('Invalid teams data structure:', teams);
-            alert('Error loading teams data. Please try again.');
-            return;
-        }
-        
-        if (!teams[teamName]) {
-            console.log('Team not found in teams data');
-            alert('Team not found!');
-            return;
-        }
-
-        currentTeam = teamName;
-        document.getElementById('team-points').textContent = teams[teamName].points;
-        showGameScreen();
-    } catch (error) {
-        console.error('Error joining team:', error);
-        alert('Failed to join team. Please try again.');
     }
 }
 
