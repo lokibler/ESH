@@ -177,15 +177,9 @@ async function initializeGoogleAPI() {
         const storedToken = getStoredToken();
         if (storedToken) {
             isLoggedIn = true;
-            // Only try to update UI elements if they exist
-            const loginButton = document.getElementById('login-button');
-            const teamForm = document.getElementById('team-form');
-            const loginMessage = document.getElementById('login-message');
-            
-            if (loginButton) loginButton.textContent = 'Logged In ✓';
-            if (loginButton) loginButton.disabled = true;
-            if (teamForm) teamForm.style.display = 'block';
-            if (loginMessage) loginMessage.style.display = 'none';
+            updateUIForLogin();
+        } else {
+            updateUIForLogout();
         }
         
         console.log('Google API initialized successfully. Login status:', isLoggedIn);
@@ -204,20 +198,14 @@ async function loginToGoogle() {
         const token = await getValidToken();
         if (token) {
             isLoggedIn = true;
-            const loginButton = document.getElementById('login-button');
-            const teamForm = document.getElementById('team-form');
-            const loginMessage = document.getElementById('login-message');
-            
-            if (loginButton) loginButton.textContent = 'Logged In ✓';
-            if (loginButton) loginButton.disabled = true;
-            if (teamForm) teamForm.style.display = 'block';
-            if (loginMessage) loginMessage.style.display = 'none';
+            updateUIForLogin();
         }
     } catch (error) {
         console.error('Login failed:', error);
         // Only show alert if this was a user-initiated login attempt
         if (!isLoggedIn) {
             alert('Failed to log in. Please try again.');
+            updateUIForLogout();
         }
     }
 }
@@ -371,6 +359,11 @@ async function createTeam() {
 
 // Join an existing team
 async function joinTeam() {
+    if (!isLoggedIn) {
+        alert('Please log in to Google first');
+        return;
+    }
+
     const teamName = document.getElementById('team-name').value.trim();
     if (!teamName) {
         alert('Please enter a team name');
@@ -589,4 +582,43 @@ document.getElementById('camera-input').addEventListener('change', function(e) {
         };
         reader.readAsDataURL(file);
     }
-}); 
+});
+
+// Update UI elements based on login state
+function updateUIForLogin() {
+    const loginButton = document.getElementById('login-button');
+    const teamForm = document.querySelector('.team-form');
+    const loginMessage = document.getElementById('login-message');
+    
+    if (loginButton) {
+        loginButton.textContent = 'Logged In ✓';
+        loginButton.disabled = true;
+    }
+    if (teamForm) {
+        teamForm.style.display = 'flex';
+    }
+    if (loginMessage) {
+        loginMessage.style.display = 'none';
+    }
+}
+
+// Update UI elements for logged out state
+function updateUIForLogout() {
+    const loginButton = document.getElementById('login-button');
+    const teamForm = document.querySelector('.team-form');
+    const loginMessage = document.getElementById('login-message');
+    
+    if (loginButton) {
+        loginButton.textContent = 'Login with Google';
+        loginButton.disabled = false;
+    }
+    if (teamForm) {
+        teamForm.style.display = 'none';
+    }
+    if (loginMessage) {
+        loginMessage.style.display = 'block';
+    }
+    
+    // Clear any stored team data
+    currentTeam = null;
+} 
