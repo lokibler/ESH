@@ -10,6 +10,20 @@
 </head>
 <body>
     <div id="app">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen active">
+            <h1>Epcot Scavenger Hunt</h1>
+            <div id="login-section">
+                <button id="login-button" onclick="loginToGoogle()">Login with Google</button>
+                <p id="login-message">Please log in to Google to start the scavenger hunt</p>
+            </div>
+            <div id="team-form" style="display: none;">
+                <input type="text" id="team-name" placeholder="Enter team name">
+                <button onclick="createTeam()">Create Team</button>
+                <button onclick="joinTeam()">Join Team</button>
+            </div>
+        </div>
+
         <!-- Team Selection Screen -->
         <div id="team-screen" class="screen active">
             <h1>🎉 Leigh's Bachelorette Party 🎉<br>Epcot Scavenger Hunt</h1>

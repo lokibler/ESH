@@ -6,6 +6,7 @@ let currentLocation = null;
 let stream = null;
 let photoCanvas = null;
 let photoContext = null;
+let isLoggedIn = false;
 
 // Configuration
 const GOOGLE_DRIVE_FOLDER_ID = '1fSH2Xfeb1LT-PnpFkZE-SRDgkD-lqGRj'; // For storing photos
@@ -179,6 +180,23 @@ async function getValidToken() {
     });
 }
 
+// Login function
+async function loginToGoogle() {
+    try {
+        const token = await getValidToken();
+        if (token) {
+            isLoggedIn = true;
+            document.getElementById('login-button').textContent = 'Logged In ✓';
+            document.getElementById('login-button').disabled = true;
+            document.getElementById('team-form').style.display = 'block';
+            document.getElementById('login-message').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Login failed:', error);
+        alert('Failed to log in. Please try again.');
+    }
+}
+
 // Initialize Google API
 async function initializeGoogleAPI() {
     try {
@@ -195,11 +213,14 @@ async function initializeGoogleAPI() {
             callback: '', // defined later
         });
         
-        // Try to get a token immediately to prompt for login at start
-        try {
-            await getValidToken();
-        } catch (error) {
-            console.error('Initial token fetch failed:', error);
+        // Check if we have a stored token
+        const storedToken = getStoredToken();
+        if (storedToken) {
+            isLoggedIn = true;
+            document.getElementById('login-button').textContent = 'Logged In ✓';
+            document.getElementById('login-button').disabled = true;
+            document.getElementById('team-form').style.display = 'block';
+            document.getElementById('login-message').style.display = 'none';
         }
         
         console.log('Google API initialized successfully');
@@ -286,6 +307,11 @@ function showScreen(screenId) {
 
 // Create a new team
 async function createTeam() {
+    if (!isLoggedIn) {
+        alert('Please log in to Google first');
+        return;
+    }
+
     const teamName = document.getElementById('team-name').value.trim();
     if (!teamName) {
         alert('Please enter a team name');
