@@ -162,9 +162,7 @@ async function initializeGoogleAPI() {
     try {
         await gapi.client.init({
             apiKey: API_KEY,
-            discoveryDocs: [
-                'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
-            ],
+            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
         
         window.tokenClient = google.accounts.oauth2.initTokenClient({
@@ -172,87 +170,64 @@ async function initializeGoogleAPI() {
             scope: 'https://www.googleapis.com/auth/drive.file',
             callback: '', // defined later
         });
+
+        // Hide team form and show login button by default
+        document.querySelector('.team-form').style.display = 'none';
+        document.getElementById('login-message').style.display = 'block';
         
-        // Check if we have a stored token
+        // Check for valid stored token
         const storedToken = getStoredToken();
         if (storedToken) {
             isLoggedIn = true;
-            updateUIForLogin();
-        } else {
-            updateUIForLogout();
+            showTeamForm();
         }
-        
-        console.log('Google API initialized successfully. Login status:', isLoggedIn);
     } catch (error) {
         console.error('Error initializing Google API:', error);
-        // Don't throw the error if we're already logged in
-        if (!isLoggedIn) {
-            throw error;
-        }
     }
 }
 
 // Login function
 async function loginToGoogle() {
+    if (!window.tokenClient) {
+        alert('Please wait for Google API to initialize');
+        return;
+    }
+
     try {
-        console.log('Starting login process...');
-        const token = await getValidToken();
-        if (token) {
-            console.log('Login successful, updating UI...');
+        window.tokenClient.callback = async (resp) => {
+            if (resp.error) {
+                throw new Error(resp.error);
+            }
+            
+            storeToken(resp.access_token, resp.expires_in);
             isLoggedIn = true;
-            updateUIForLogin();
-        } else {
-            console.error('No token received after login');
-            isLoggedIn = false;
-            updateUIForLogout();
-        }
+            showTeamForm();
+        };
+        
+        window.tokenClient.requestAccessToken({prompt: 'consent'});
     } catch (error) {
         console.error('Login failed:', error);
-        isLoggedIn = false;
-        // Only show alert if this was a user-initiated login attempt
-        if (!isLoggedIn) {
-            alert('Failed to log in. Please try again.');
-            updateUIForLogout();
-        }
+        alert('Failed to log in. Please try again.');
     }
 }
 
-// Get a valid token
+// Simple UI update functions
+function showTeamForm() {
+    document.querySelector('.team-form').style.display = 'flex';
+    document.getElementById('login-message').style.display = 'none';
+    document.getElementById('login-button').textContent = 'Logged In ✓';
+    document.getElementById('login-button').disabled = true;
+}
+
+// Get a valid token (for use in other functions)
 async function getValidToken() {
-    // Check for stored token first
-    const storedToken = getStoredToken();
-    if (storedToken) {
-        return storedToken;
-    }
-
-    // If no stored token, request a new one
-    return new Promise((resolve, reject) => {
-        if (!window.tokenClient) {
-            console.error('Token client not initialized');
-            if (isLoggedIn) {
-                // If we're already logged in but tokenClient isn't ready,
-                // just return the stored token
-                const fallbackToken = getStoredToken();
-                if (fallbackToken) {
-                    resolve(fallbackToken);
-                    return;
-                }
-            }
-            reject(new Error('Token client not initialized'));
-            return;
-        }
-
-        window.tokenClient.callback = async (resp) => {
-            if (resp.error !== undefined) {
-                reject(resp.error);
-                return;
-            }
-            // Store the new token
-            storeToken(resp.access_token, resp.expires_in);
-            resolve(resp.access_token);
-        };
-        window.tokenClient.requestAccessToken({prompt: 'consent'});
-    });
+    const token = getStoredToken();
+    if (token) return token;
+    
+    // If no token, user needs to log in again
+    alert('Please log in to continue');
+    document.getElementById('login-button').disabled = false;
+    throw new Error('No valid token');
 }
 
 // Load team data from npoint.io
