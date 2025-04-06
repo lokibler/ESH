@@ -157,46 +157,6 @@ function storeToken(token, expiresIn) {
     localStorage.setItem('googleDriveToken', JSON.stringify({ token, expiresAt }));
 }
 
-// Get a valid token
-async function getValidToken() {
-    // Check for stored token first
-    const storedToken = getStoredToken();
-    if (storedToken) {
-        return storedToken;
-    }
-
-    // If no stored token, request a new one
-    return new Promise((resolve, reject) => {
-        window.tokenClient.callback = async (resp) => {
-            if (resp.error !== undefined) {
-                reject(resp.error);
-                return;
-            }
-            // Store the new token
-            storeToken(resp.access_token, resp.expires_in);
-            resolve(resp.access_token);
-        };
-        window.tokenClient.requestAccessToken({prompt: 'consent'});
-    });
-}
-
-// Login function
-async function loginToGoogle() {
-    try {
-        const token = await getValidToken();
-        if (token) {
-            isLoggedIn = true;
-            document.getElementById('login-button').textContent = 'Logged In ✓';
-            document.getElementById('login-button').disabled = true;
-            document.getElementById('team-form').style.display = 'block';
-            document.getElementById('login-message').style.display = 'none';
-        }
-    } catch (error) {
-        console.error('Login failed:', error);
-        alert('Failed to log in. Please try again.');
-    }
-}
-
 // Initialize Google API
 async function initializeGoogleAPI() {
     try {
@@ -217,16 +177,87 @@ async function initializeGoogleAPI() {
         const storedToken = getStoredToken();
         if (storedToken) {
             isLoggedIn = true;
-            document.getElementById('login-button').textContent = 'Logged In ✓';
-            document.getElementById('login-button').disabled = true;
-            document.getElementById('team-form').style.display = 'block';
-            document.getElementById('login-message').style.display = 'none';
+            // Only try to update UI elements if they exist
+            const loginButton = document.getElementById('login-button');
+            const teamForm = document.getElementById('team-form');
+            const loginMessage = document.getElementById('login-message');
+            
+            if (loginButton) loginButton.textContent = 'Logged In ✓';
+            if (loginButton) loginButton.disabled = true;
+            if (teamForm) teamForm.style.display = 'block';
+            if (loginMessage) loginMessage.style.display = 'none';
         }
         
-        console.log('Google API initialized successfully');
+        console.log('Google API initialized successfully. Login status:', isLoggedIn);
     } catch (error) {
         console.error('Error initializing Google API:', error);
+        // Don't throw the error if we're already logged in
+        if (!isLoggedIn) {
+            throw error;
+        }
     }
+}
+
+// Login function
+async function loginToGoogle() {
+    try {
+        const token = await getValidToken();
+        if (token) {
+            isLoggedIn = true;
+            const loginButton = document.getElementById('login-button');
+            const teamForm = document.getElementById('team-form');
+            const loginMessage = document.getElementById('login-message');
+            
+            if (loginButton) loginButton.textContent = 'Logged In ✓';
+            if (loginButton) loginButton.disabled = true;
+            if (teamForm) teamForm.style.display = 'block';
+            if (loginMessage) loginMessage.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Login failed:', error);
+        // Only show alert if this was a user-initiated login attempt
+        if (!isLoggedIn) {
+            alert('Failed to log in. Please try again.');
+        }
+    }
+}
+
+// Get a valid token
+async function getValidToken() {
+    // Check for stored token first
+    const storedToken = getStoredToken();
+    if (storedToken) {
+        return storedToken;
+    }
+
+    // If no stored token, request a new one
+    return new Promise((resolve, reject) => {
+        if (!window.tokenClient) {
+            console.error('Token client not initialized');
+            if (isLoggedIn) {
+                // If we're already logged in but tokenClient isn't ready,
+                // just return the stored token
+                const fallbackToken = getStoredToken();
+                if (fallbackToken) {
+                    resolve(fallbackToken);
+                    return;
+                }
+            }
+            reject(new Error('Token client not initialized'));
+            return;
+        }
+
+        window.tokenClient.callback = async (resp) => {
+            if (resp.error !== undefined) {
+                reject(resp.error);
+                return;
+            }
+            // Store the new token
+            storeToken(resp.access_token, resp.expires_in);
+            resolve(resp.access_token);
+        };
+        window.tokenClient.requestAccessToken({prompt: 'consent'});
+    });
 }
 
 // Load team data from npoint.io
