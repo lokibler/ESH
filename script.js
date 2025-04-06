@@ -195,13 +195,20 @@ async function initializeGoogleAPI() {
 // Login function
 async function loginToGoogle() {
     try {
+        console.log('Starting login process...');
         const token = await getValidToken();
         if (token) {
+            console.log('Login successful, updating UI...');
             isLoggedIn = true;
             updateUIForLogin();
+        } else {
+            console.error('No token received after login');
+            isLoggedIn = false;
+            updateUIForLogout();
         }
     } catch (error) {
         console.error('Login failed:', error);
+        isLoggedIn = false;
         // Only show alert if this was a user-initiated login attempt
         if (!isLoggedIn) {
             alert('Failed to log in. Please try again.');
@@ -596,6 +603,9 @@ function updateUIForLogin() {
     }
     if (teamForm) {
         teamForm.style.display = 'flex';
+        console.log('Team form should be visible now');
+    } else {
+        console.error('Team form element not found');
     }
     if (loginMessage) {
         loginMessage.style.display = 'none';
@@ -614,6 +624,7 @@ function updateUIForLogout() {
     }
     if (teamForm) {
         teamForm.style.display = 'none';
+        console.log('Team form should be hidden now');
     }
     if (loginMessage) {
         loginMessage.style.display = 'block';
