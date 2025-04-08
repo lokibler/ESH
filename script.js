@@ -1,6 +1,6 @@
-// Version 1.4 - Session Persistence Update (2024-03-19)
-console.log('=== Epcot Scavenger Hunt v1.4 ===');
-console.log('🎯 Changes: Added session persistence and team switching');
+// Version 1.5 - Login and Team Management Update (2024-03-19)
+console.log('=== Epcot Scavenger Hunt v1.5 ===');
+console.log('🎯 Changes: Added login requirement for team creation/joining');
 console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
@@ -18,6 +18,72 @@ const GOOGLE_DRIVE_FOLDER_ID = '1fSH2Xfeb1LT-PnpFkZE-SRDgkD-lqGRj'; // For stori
 const NPOINT_ID = '7d8a2bb0fe5092349a03'; // Replace with your npoint.io bin ID
 const CLIENT_ID = '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs';
+
+// Load team data from npoint.io
+async function loadTeam(teamName) {
+    try {
+        const response = await fetch(`https://api.npoint.io/${NPOINT_ID}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch team data');
+        }
+
+        const data = await response.json();
+        const teams = data.teams || {};
+        console.log('Teams data:', JSON.stringify(teams, null, 2));
+
+        // If no team name provided, return all teams data
+        if (!teamName) {
+            return teams;
+        }
+
+        // Return specific team data or empty team data if not found
+        return teams[teamName] || { points: 0, completedTasks: [] };
+    } catch (error) {
+        console.error('Error in loadTeam:', error);
+        console.error('Error stack:', error.stack);
+        return { points: 0, completedTasks: [] };
+    }
+}
+
+// Save team data to npoint.io
+async function saveTeam(teamName, teamData) {
+    try {
+        console.log('Starting saveTeam function...');
+        console.log('Team name:', teamName);
+        console.log('Team data:', JSON.stringify(teamData, null, 2));
+
+        // Get current data first
+        const response = await fetch(`https://api.npoint.io/${NPOINT_ID}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch current data');
+        }
+
+        const data = await response.json();
+        const teams = data.teams || {};
+
+        // Update team data
+        teams[teamName] = teamData;
+
+        // Save back to npoint.io
+        const updateResponse = await fetch(`https://api.npoint.io/${NPOINT_ID}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ teams })
+        });
+
+        if (!updateResponse.ok) {
+            throw new Error('Failed to update team data');
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error in saveTeam:', error);
+        alert('Failed to save team data. Please try again.');
+        return false;
+    }
+}
 
 // Tasks data organized by location
 const tasks = {
