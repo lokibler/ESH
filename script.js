@@ -1,10 +1,10 @@
-// Version 1.3 - Camera UI Update (2024-03-19)
-console.log('=== Epcot Scavenger Hunt v1.3 ===');
-console.log('🎯 Changes: Camera UI Update - Improved button layout');
+// Version 1.4 - Session Persistence Update (2024-03-19)
+console.log('=== Epcot Scavenger Hunt v1.4 ===');
+console.log('🎯 Changes: Added session persistence and team switching');
 console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
-let currentTeam = null;
+let currentTeam = localStorage.getItem('currentTeam');
 let currentTask = null;
 let currentPhoto = null;
 let currentLocation = null;
@@ -173,22 +173,54 @@ async function initializeGoogleAPI() {
         window.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/drive.file',
+            prompt: '', // Don't force consent prompt if token exists
             callback: '', // defined later
         });
 
-        // Hide team form and show login button by default
-        document.querySelector('.team-form').style.display = 'none';
-        document.getElementById('login-message').style.display = 'block';
-        
-        // Check for valid stored token
+        // Check for stored session
         const storedToken = getStoredToken();
         if (storedToken) {
             isLoggedIn = true;
-            showTeamForm();
+            if (currentTeam) {
+                showGameScreen();
+            } else {
+                showTeamForm();
+            }
+        } else {
+            document.querySelector('.team-form').style.display = 'none';
+            document.getElementById('login-message').style.display = 'block';
         }
     } catch (error) {
         console.error('Error initializing Google API:', error);
     }
+}
+
+// Show the team form
+function showTeamForm() {
+    document.querySelector('.team-form').style.display = 'flex';
+    document.getElementById('login-message').style.display = 'none';
+    document.getElementById('login-button').textContent = 'Logged In ✓';
+    document.getElementById('login-button').disabled = true;
+}
+
+// Switch teams
+function switchTeams() {
+    localStorage.removeItem('currentTeam');
+    currentTeam = null;
+    showScreen('team-screen');
+    showTeamForm();
+}
+
+// Show the game screen
+function showGameScreen() {
+    document.getElementById('current-team').textContent = currentTeam;
+    showLocations();
+    showScreen('game-screen');
+    
+    // Load and display total points
+    loadTeam(currentTeam).then(teamData => {
+        document.getElementById('team-points').textContent = teamData.points;
+    });
 }
 
 // Login function
@@ -206,109 +238,19 @@ async function loginToGoogle() {
             
             storeToken(resp.access_token, resp.expires_in);
             isLoggedIn = true;
-            showTeamForm();
+            
+            if (currentTeam) {
+                showGameScreen();
+            } else {
+                showTeamForm();
+            }
         };
         
-        window.tokenClient.requestAccessToken({prompt: 'consent'});
+        window.tokenClient.requestAccessToken();
     } catch (error) {
         console.error('Login failed:', error);
         alert('Failed to log in. Please try again.');
     }
-}
-
-// Simple UI update functions
-function showTeamForm() {
-    document.querySelector('.team-form').style.display = 'flex';
-    document.getElementById('login-message').style.display = 'none';
-    document.getElementById('login-button').textContent = 'Logged In ✓';
-    document.getElementById('login-button').disabled = true;
-}
-
-// Get a valid token (for use in other functions)
-async function getValidToken() {
-    const token = getStoredToken();
-    if (token) return token;
-    
-    // If no token, user needs to log in again
-    alert('Please log in to continue');
-    document.getElementById('login-button').disabled = false;
-    throw new Error('No valid token');
-}
-
-// Load team data from npoint.io
-async function loadTeam(teamName) {
-    try {
-        console.log('=== DEBUG: Starting loadTeam function ===');
-        
-        const response = await fetch(`https://api.npoint.io/${NPOINT_ID}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch team data');
-        }
-
-        const data = await response.json();
-        const teams = data.teams || {};
-        console.log('Teams data:', JSON.stringify(teams, null, 2));
-
-        // If no team name provided, return all teams data
-        if (!teamName) {
-            return teams;
-        }
-
-        // Return specific team data or empty team data if not found
-        return teams[teamName] || { points: 0, completedTasks: [] };
-    } catch (error) {
-        console.error('Error in loadTeam:', error);
-        console.error('Error stack:', error.stack);
-        return { points: 0, completedTasks: [] };
-    }
-}
-
-// Save team data to npoint.io
-async function saveTeam(teamName, teamData) {
-    try {
-        console.log('Starting saveTeam function...');
-        console.log('Team name:', teamName);
-        console.log('Team data:', JSON.stringify(teamData, null, 2));
-
-        // Get current data first
-        const response = await fetch(`https://api.npoint.io/${NPOINT_ID}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch current data');
-        }
-
-        const data = await response.json();
-        const teams = data.teams || {};
-        
-        // Update team data
-        teams[teamName] = teamData;
-
-        // Save back to npoint.io
-        const updateResponse = await fetch(`https://api.npoint.io/${NPOINT_ID}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ teams })
-        });
-
-        if (!updateResponse.ok) {
-            throw new Error('Failed to update team data');
-        }
-
-        return true;
-    } catch (error) {
-        console.error('Error in saveTeam:', error);
-        alert('Failed to save team data. Please try again.');
-        return false;
-    }
-}
-
-// Show a specific screen
-function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(screen => {
-        screen.classList.remove('active');
-    });
-    document.getElementById(screenId).classList.add('active');
 }
 
 // Create a new team
@@ -336,6 +278,7 @@ async function createTeam() {
         const newTeamData = { points: 0, completedTasks: [] };
         if (await saveTeam(teamName, newTeamData)) {
             currentTeam = teamName;
+            localStorage.setItem('currentTeam', teamName);
             showGameScreen();
         }
     } catch (error) {
@@ -361,7 +304,7 @@ async function joinTeam() {
         console.log('Attempting to join team:', teamName);
         
         // Load all teams data first
-        const teams = await loadTeam(''); // Load all teams data
+        const teams = await loadTeam('');
         console.log('All teams data:', JSON.stringify(teams, null, 2));
         
         if (!teams[teamName]) {
@@ -371,24 +314,13 @@ async function joinTeam() {
         }
 
         currentTeam = teamName;
+        localStorage.setItem('currentTeam', teamName);
         document.getElementById('team-points').textContent = teams[teamName].points;
         showGameScreen();
     } catch (error) {
         console.error('Error joining team:', error);
         alert('Failed to join team. Please try again.');
     }
-}
-
-// Show the game screen
-function showGameScreen() {
-    document.getElementById('current-team').textContent = currentTeam;
-    showLocations();
-    showScreen('game-screen');
-    
-    // Load and display total points
-    loadTeam(currentTeam).then(teamData => {
-        document.getElementById('team-points').textContent = teamData.points;
-    });
 }
 
 // Show location buttons

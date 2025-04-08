@@ -1,7 +1,7 @@
 <!-- 
-    Epcot Scavenger Hunt v1.3
+    Epcot Scavenger Hunt v1.4
     Last updated: 2024-03-19
-    Changes: Camera UI Update - Improved button layout with side-by-side save/cancel buttons
+    Changes: Added session persistence and team switching functionality
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -55,6 +55,7 @@
                 <h2 id="current-team">Team: <span></span></h2>
                 <div class="points-container">
                     <div class="points">⭐ Points: <span id="team-points">0</span></div>
+                    <button onclick="switchTeams()" class="switch-team-button">Switch Teams</button>
                 </div>
             </header>
 
