@@ -1,6 +1,6 @@
-// Version 1.7 - Updated validation logic (2024-04-09)
-console.log('=== Epcot Scavenger Hunt v1.7 ===');
-console.log('🎯 Changes: Updated validation logic');
+// Version 1.8 - Team switch page reset (2024-04-09)
+console.log('=== Epcot Scavenger Hunt v1.8 ===');
+console.log('🎯 Changes: Team switch page reset');
 console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
@@ -325,6 +325,8 @@ function showTeamForm() {
 function switchTeams() {
     localStorage.removeItem('currentTeam');
     currentTeam = null;
+    currentLocation = null;  // Reset current location
+    document.getElementById('task-list').innerHTML = '';  // Clear task list
     showScreen('team-screen');
     showTeamForm();
 }
