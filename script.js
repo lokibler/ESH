@@ -1,5 +1,7 @@
-// Version 1.1 - Camera UI Update (2024-03-19)
-console.log('Loading Epcot Scavenger Hunt v1.1 - Camera UI Update');
+// Version 1.3 - Camera UI Update (2024-03-19)
+console.log('=== Epcot Scavenger Hunt v1.3 ===');
+console.log('🎯 Changes: Camera UI Update - Improved button layout');
+console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
 let currentTeam = null;

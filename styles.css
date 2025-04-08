@@ -279,7 +279,14 @@ header h2 {
 }
 
 .bottom-controls {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.bottom-controls button {
+    flex: 1;
+    max-width: 200px;
 }
 
 .camera-controls button {
@@ -373,6 +380,10 @@ header h2 {
         padding: 12px 8px;
         font-size: 13px;
         height: 44px;
+    }
+    
+    .bottom-controls button {
+        max-width: none;
     }
     
     .camera-container {
