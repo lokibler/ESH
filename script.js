@@ -1,6 +1,6 @@
-// Version 1.7 - Updated validation logic (2024-04-09)
-console.log('=== Epcot Scavenger Hunt v1.7 ===');
-console.log('🎯 Changes: Updated validation logic');
+// Version 1.8 - Silently refresh token (2024-04-09)
+console.log('=== Epcot Scavenger Hunt v1.8 ===');
+console.log('🎯 Changes: Silently refresh token');
 console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
@@ -198,7 +198,25 @@ async function initializeGoogleAPI() {
             client_id: CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/drive.file',
             prompt: '', // Don't force consent prompt if token exists
-            callback: '', // defined later
+            callback: async (resp) => {
+                if (resp.error) {
+                    console.error('Token client error:', resp.error);
+                    updateUIForLogout();
+                    return;
+                }
+                
+                // Store the new token
+                storeToken(resp.access_token, resp.expires_in);
+                isLoggedIn = true;
+                
+                // Update UI and show appropriate screen
+                updateUIForLogin();
+                if (currentTeam) {
+                    showGameScreen();
+                } else {
+                    showTeamForm();
+                }
+            }
         });
 
         // Check for stored token and validate it
@@ -213,6 +231,7 @@ async function initializeGoogleAPI() {
                 });
                 
                 if (response.ok) {
+                    // Token is valid, set up the state
                     isLoggedIn = true;
                     updateUIForLogin();
                     if (currentTeam) {
@@ -226,11 +245,16 @@ async function initializeGoogleAPI() {
                 console.log('Stored token validation failed:', error);
             }
             
-            // If we get here, the token was invalid
-            localStorage.removeItem('googleDriveToken');
+            // If we get here, the token was invalid - try to get a new one silently
+            try {
+                window.tokenClient.requestAccessToken({ prompt: '' });
+                return;
+            } catch (error) {
+                console.log('Silent token refresh failed:', error);
+            }
         }
         
-        // No valid token found
+        // No valid token found and silent refresh failed
         document.querySelector('.team-form').style.display = 'none';
         document.getElementById('login-message').style.display = 'block';
         updateUIForLogout();
@@ -341,7 +365,7 @@ function showGameScreen() {
     });
 }
 
-// Login function
+// Login function - now just a wrapper around the token request
 async function loginToGoogle() {
     if (!window.tokenClient) {
         alert('Please wait for Google API to initialize');
@@ -349,22 +373,7 @@ async function loginToGoogle() {
     }
 
     try {
-        window.tokenClient.callback = async (resp) => {
-            if (resp.error) {
-                throw new Error(resp.error);
-            }
-            
-            storeToken(resp.access_token, resp.expires_in);
-            isLoggedIn = true;
-            
-            if (currentTeam) {
-                showGameScreen();
-            } else {
-                showTeamForm();
-            }
-        };
-        
-        window.tokenClient.requestAccessToken();
+        window.tokenClient.requestAccessToken({ prompt: 'consent' });
     } catch (error) {
         console.error('Login failed:', error);
         alert('Failed to log in. Please try again.');
