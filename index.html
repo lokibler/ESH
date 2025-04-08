@@ -1,7 +1,7 @@
 <!-- 
-    Epcot Scavenger Hunt v1.8
+    Epcot Scavenger Hunt v1.9
     Last updated: 2024-04-09
-    Changes: Team switch page reset
+    Changes: Move switch teams button to bottom of screen
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +55,6 @@
                 <h2 id="current-team">Team: <span></span></h2>
                 <div class="points-container">
                     <div class="points">⭐ Points: <span id="team-points">0</span></div>
-                    <button onclick="switchTeams()" class="switch-team-button">Switch Teams</button>
                 </div>
             </header>
 
@@ -68,6 +67,8 @@
                 <h3>📝 Tasks</h3>
                 <div id="task-list"></div>
             </div>
+            
+            <button onclick="switchTeams()" class="switch-team-button">Switch Teams</button>
         </div>
 
         <!-- Camera Screen -->

@@ -1,6 +1,6 @@
-// Version 1.8 - Team switch page reset (2024-04-09)
-console.log('=== Epcot Scavenger Hunt v1.8 ===');
-console.log('🎯 Changes: Team switch page reset');
+// Version 1.9 - move switch teams button (2024-04-09)
+console.log('=== Epcot Scavenger Hunt v1.9 ===');
+console.log('🎯 Changes: Move switch teams button to bottom of screen');
 console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
