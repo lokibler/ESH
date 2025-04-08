@@ -1,6 +1,6 @@
-// Version 1.6 - Added more missing functions (2024-04-09)
-console.log('=== Epcot Scavenger Hunt v1.6 ===');
-console.log('🎯 Changes: Added more missing functions');
+// Version 1.7 - Updated validation logic (2024-04-09)
+console.log('=== Epcot Scavenger Hunt v1.7 ===');
+console.log('🎯 Changes: Updated validation logic');
 console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
@@ -162,6 +162,30 @@ function storeToken(token, expiresIn) {
     localStorage.setItem('googleDriveToken', JSON.stringify({ token, expiresAt }));
 }
 
+// Get a valid token, either from storage or by requesting a new one
+async function getValidToken() {
+    const storedToken = getStoredToken();
+    if (storedToken) {
+        return storedToken;
+    }
+
+    return new Promise((resolve, reject) => {
+        try {
+            window.tokenClient.callback = (response) => {
+                if (response.error) {
+                    reject(response.error);
+                    return;
+                }
+                storeToken(response.access_token, response.expires_in);
+                resolve(response.access_token);
+            };
+            window.tokenClient.requestAccessToken();
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
 // Initialize Google API
 async function initializeGoogleAPI() {
     try {
@@ -177,19 +201,39 @@ async function initializeGoogleAPI() {
             callback: '', // defined later
         });
 
-        // Check for stored session
+        // Check for stored token and validate it
         const storedToken = getStoredToken();
         if (storedToken) {
-            isLoggedIn = true;
-            if (currentTeam) {
-                showGameScreen();
-            } else {
-                showTeamForm();
+            try {
+                // Verify the token is still valid by making a test request
+                const response = await fetch('https://www.googleapis.com/drive/v3/files?pageSize=1', {
+                    headers: {
+                        'Authorization': `Bearer ${storedToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    isLoggedIn = true;
+                    updateUIForLogin();
+                    if (currentTeam) {
+                        showGameScreen();
+                    } else {
+                        showTeamForm();
+                    }
+                    return;
+                }
+            } catch (error) {
+                console.log('Stored token validation failed:', error);
             }
-        } else {
-            document.querySelector('.team-form').style.display = 'none';
-            document.getElementById('login-message').style.display = 'block';
+            
+            // If we get here, the token was invalid
+            localStorage.removeItem('googleDriveToken');
         }
+        
+        // No valid token found
+        document.querySelector('.team-form').style.display = 'none';
+        document.getElementById('login-message').style.display = 'block';
+        updateUIForLogout();
     } catch (error) {
         console.error('Error initializing Google API:', error);
     }
