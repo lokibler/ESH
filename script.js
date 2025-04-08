@@ -1,3 +1,6 @@
+// Version 1.1 - Camera UI Update (2024-03-19)
+console.log('Loading Epcot Scavenger Hunt v1.1 - Camera UI Update');
+
 // Global variables
 let currentTeam = null;
 let currentTask = null;
