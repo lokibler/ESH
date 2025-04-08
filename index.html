@@ -1,7 +1,7 @@
 <!-- 
-    Epcot Scavenger Hunt v1.9
+    Epcot Scavenger Hunt v1.10
     Last updated: 2024-04-09
-    Changes: Fixing login bug
+    Changes: Simplifying login system
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -19,12 +19,12 @@
             <h1>🎉 Leigh's Bachelorette Party 🎉<br>Epcot Scavenger Hunt</h1>
             <div id="login-section">
                 <button id="login-button" onclick="loginToGoogle()">Login with Google</button>
-                <p id="login-message">Please log in to Google to start the scavenger hunt</p>
+                <p id="login-message">Please log in with Google to start the scavenger hunt</p>
             </div>
             <div class="team-form" style="display: none;">
-                <input type="text" id="team-name" placeholder="Enter your team name" autocomplete="off">
+                <input type="text" id="team-name" placeholder="Enter team name">
+                <button onclick="createTeam()">Create Team</button>
                 <button onclick="joinTeam()">Join Team</button>
-                <button onclick="createTeam()">Create New Team</button>
                 <button onclick="showScreen('rules-screen')" class="secondary-button">View Rules</button>
             </div>
         </div>
@@ -91,57 +91,24 @@
 
     <!-- Google API Scripts -->
     <script>
-        // Global variables for Google API
-        window.tokenClient = null;
-        window.gapiInited = false;
-        window.gisInited = false;
+        let tokenClient;
+        
+        function gapiLoaded() {
+            gapi.load('client', initializeGoogleAPI);
+        }
 
-        // Initialize Google API
-        window.initializeGapiClient = async function() {
-            try {
-                console.log('Initializing GAPI client...');
-                await gapi.client.init({
-                    apiKey: 'AIzaSyDxR99_WeVcr4mA8AmalaJ85VlqdI7oocs',
-                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-                });
-                window.gapiInited = true;
-                console.log('GAPI client initialized successfully');
-                window.maybeEnableButtons();
-            } catch (err) {
-                console.error('Error initializing GAPI client:', err);
-            }
-        };
-
-        window.maybeEnableButtons = function() {
-            console.log('Checking API initialization status:', {
-                gapiInited: window.gapiInited,
-                gisInited: window.gisInited
-            });
-            if (window.gapiInited && window.gisInited) {
-                console.log('Google API is ready to use');
-            }
-        };
-
-        // Define global functions before loading the API
-        window.gapiLoaded = function() {
-            console.log('GAPI script loaded, loading client...');
-            gapi.load('client', window.initializeGapiClient);
-        };
-
-        window.gisLoaded = function() {
-            console.log('GIS script loaded, initializing token client...');
-            window.tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: '770657216624-v7j2d3bdpsj2t70qejqiselj5u077h2u.apps.googleusercontent.com',
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: '1098425701328-aqc7qqvvlbqbvvvjjjjvvvvvvvvvvvvv.apps.googleusercontent.com',
                 scope: 'https://www.googleapis.com/auth/drive.file',
-                callback: '', // defined later
+                callback: handleTokenResponse
             });
-            window.gisInited = true;
-            console.log('Token client initialized successfully');
-            window.maybeEnableButtons();
-        };
+        }
     </script>
-    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
     <script src="script.js"></script>
+    <script async defer src="https://apis.google.com/js/api.js?onload=gapiLoaded"></script>
+    <script async defer src="https://accounts.google.com/gsi/client?onload=gisLoaded"></script>
 </body>
 </html> 

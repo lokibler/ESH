@@ -1,6 +1,6 @@
-// Version 1.9 - Fixing login bug (2024-04-09)
-console.log('=== Epcot Scavenger Hunt v1.9 ===');
-console.log('🎯 Changes: Fixing login bug');
+// Version 1.10 - Simplifying login system (2024-04-09)
+console.log('=== Epcot Scavenger Hunt v1.10 ===');
+console.log('🎯 Changes: Simplifying login system');
 console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
@@ -144,24 +144,6 @@ const tasks = {
     ]
 };
 
-// Token management
-function getStoredToken() {
-    const tokenData = localStorage.getItem('googleDriveToken');
-    if (!tokenData) return null;
-    
-    const { token, expiresAt } = JSON.parse(tokenData);
-    if (expiresAt && Date.now() >= expiresAt) {
-        localStorage.removeItem('googleDriveToken');
-        return null;
-    }
-    return token;
-}
-
-function storeToken(token, expiresIn) {
-    const expiresAt = Date.now() + (expiresIn * 1000);
-    localStorage.setItem('googleDriveToken', JSON.stringify({ token, expiresAt }));
-}
-
 // Initialize Google API
 async function initializeGoogleAPI() {
     try {
@@ -169,142 +151,146 @@ async function initializeGoogleAPI() {
             apiKey: API_KEY,
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
-
-        // Set up token client with consistent callback
-        window.tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.file',
-            prompt: '', // Don't force consent prompt if token exists
-            callback: (resp) => handleTokenResponse(resp)
-        });
-
-        // Check for stored token and validate it
-        const storedToken = getStoredToken();
+        
+        // Check for stored token
+        const storedToken = localStorage.getItem('googleToken');
         if (storedToken) {
+            // Verify token is still valid
             try {
-                // Verify the token is still valid by making a test request
                 const response = await fetch('https://www.googleapis.com/drive/v3/files?pageSize=1', {
-                    headers: {
-                        'Authorization': `Bearer ${storedToken}`
-                    }
+                    headers: { 'Authorization': `Bearer ${storedToken}` }
                 });
                 
                 if (response.ok) {
-                    // Token is valid, set up the state
-                    isLoggedIn = true;
-                    updateUIForLogin();
-                    if (currentTeam) {
-                        showGameScreen();
-                    } else {
-                        showTeamForm();
-                    }
+                    handleTokenResponse({ access_token: storedToken });
                     return;
                 }
             } catch (error) {
-                console.log('Stored token validation failed:', error);
-            }
-            
-            // If we get here, the token was invalid - try to get a new one silently
-            try {
-                window.tokenClient.requestAccessToken({ prompt: '' });
-                return;
-            } catch (error) {
-                console.log('Silent token refresh failed:', error);
+                console.log('Stored token invalid:', error);
             }
         }
         
-        // No valid token found and silent refresh failed
-        document.querySelector('.team-form').style.display = 'none';
-        document.getElementById('login-message').style.display = 'block';
+        // No valid token, show login button
         updateUIForLogout();
     } catch (error) {
         console.error('Error initializing Google API:', error);
+        updateUIForLogout();
     }
 }
 
-// Handle token response in one place
-function handleTokenResponse(resp) {
-    if (resp.error) {
-        console.error('Token client error:', resp.error);
+// Handle token response
+function handleTokenResponse(response) {
+    if (response.error) {
+        console.error('Token error:', response.error);
         updateUIForLogout();
         return;
     }
-    
-    // Store the new token
-    storeToken(resp.access_token, resp.expires_in);
+
+    // Store token
+    localStorage.setItem('googleToken', response.access_token);
     isLoggedIn = true;
     
-    // Update UI and show appropriate screen
+    // Update UI
     updateUIForLogin();
+    
+    // If team exists, show game screen
     if (currentTeam) {
         showGameScreen();
-    } else {
-        showTeamForm();
     }
 }
 
+// Login function
+function loginToGoogle() {
+    if (!tokenClient) {
+        alert('Please wait for Google API to initialize');
+        return;
+    }
+    tokenClient.requestAccessToken();
+}
+
+// Logout function
+function logout() {
+    localStorage.removeItem('googleToken');
+    localStorage.removeItem('currentTeam');
+    currentTeam = null;
+    isLoggedIn = false;
+    updateUIForLogout();
+    location.reload();
+}
+
+// Update UI for login state
+function updateUIForLogin() {
+    const loginButton = document.getElementById('login-button');
+    const teamForm = document.querySelector('.team-form');
+    const loginMessage = document.getElementById('login-message');
+    
+    if (loginButton) {
+        loginButton.textContent = 'Logged In ✓';
+        loginButton.disabled = true;
+    }
+    if (teamForm) teamForm.style.display = 'flex';
+    if (loginMessage) loginMessage.style.display = 'none';
+}
+
+// Update UI for logout state
+function updateUIForLogout() {
+    const loginButton = document.getElementById('login-button');
+    const teamForm = document.querySelector('.team-form');
+    const loginMessage = document.getElementById('login-message');
+    
+    if (loginButton) {
+        loginButton.textContent = 'Login with Google';
+        loginButton.disabled = false;
+    }
+    if (teamForm) teamForm.style.display = 'none';
+    if (loginMessage) loginMessage.style.display = 'block';
+}
+
 // Load team data from npoint.io
-async function loadTeam(teamName) {
+async function loadTeam(teamName = null) {
     try {
         const response = await fetch(`https://api.npoint.io/${NPOINT_ID}`);
         if (!response.ok) {
-            throw new Error('Failed to fetch team data');
+            throw new Error('Failed to load team data');
         }
-
         const data = await response.json();
-        const teams = data.teams || {};
-        console.log('Teams data:', JSON.stringify(teams, null, 2));
-
-        // If no team name provided, return all teams data
-        if (!teamName) {
-            return teams;
+        
+        if (teamName) {
+            // Return specific team or default structure if team doesn't exist
+            return data[teamName] || { points: 0, completedTasks: {} };
         }
-
-        // Return specific team data or empty team data if not found
-        return teams[teamName] || { points: 0, completedTasks: [] };
+        return data; // Return all teams
     } catch (error) {
-        console.error('Error in loadTeam:', error);
-        console.error('Error stack:', error.stack);
-        return { points: 0, completedTasks: [] };
+        console.error('Error loading team data:', error);
+        return teamName ? { points: 0, completedTasks: {} } : {};
     }
 }
 
 // Save team data to npoint.io
 async function saveTeam(teamName, teamData) {
     try {
-        console.log('Starting saveTeam function...');
-        console.log('Team name:', teamName);
-        console.log('Team data:', JSON.stringify(teamData, null, 2));
-
-        // Get current data first
-        const response = await fetch(`https://api.npoint.io/${NPOINT_ID}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch current data');
-        }
-
-        const data = await response.json();
-        const teams = data.teams || {};
-
-        // Update team data
-        teams[teamName] = teamData;
-
+        // Load existing data first
+        const allTeams = await loadTeam();
+        
+        // Update the specific team's data
+        allTeams[teamName] = teamData;
+        
         // Save back to npoint.io
-        const updateResponse = await fetch(`https://api.npoint.io/${NPOINT_ID}`, {
+        const response = await fetch(`https://api.npoint.io/${NPOINT_ID}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ teams })
+            body: JSON.stringify(allTeams)
         });
-
-        if (!updateResponse.ok) {
-            throw new Error('Failed to update team data');
+        
+        if (!response.ok) {
+            throw new Error('Failed to save team data');
         }
-
+        
         return true;
     } catch (error) {
-        console.error('Error in saveTeam:', error);
-        alert('Failed to save team data. Please try again.');
+        console.error('Error saving team data:', error);
         return false;
     }
 }
@@ -343,21 +329,6 @@ function showGameScreen() {
     loadTeam(currentTeam).then(teamData => {
         document.getElementById('team-points').textContent = teamData.points;
     });
-}
-
-// Login function - now just a wrapper around the token request
-async function loginToGoogle() {
-    if (!window.tokenClient) {
-        alert('Please wait for Google API to initialize');
-        return;
-    }
-
-    try {
-        window.tokenClient.requestAccessToken({ prompt: 'consent' });
-    } catch (error) {
-        console.error('Login failed:', error);
-        alert('Failed to log in. Please try again.');
-    }
 }
 
 // Create a new team
@@ -534,39 +505,30 @@ function handlePhotoInput(file) {
     }
 }
 
-// Save the photo and complete the task
+// Modify savePhoto to use stored token
 async function savePhoto() {
     if (!currentPhoto) {
         alert('Please take a photo first!');
         return;
     }
 
-    // Validate file type
+    // Validate file
     if (!currentPhoto.type.startsWith('image/')) {
         alert('Please select an image file');
         return;
     }
-
-    // Validate file size (10MB limit)
     if (currentPhoto.size > 10 * 1024 * 1024) {
         alert('File is too large. Maximum size is 10MB');
         return;
     }
 
-    const teamData = await loadTeam(currentTeam);
-    if (teamData.completedTasks.includes(currentTask)) {
-        alert('Task already completed!');
+    const token = localStorage.getItem('googleToken');
+    if (!token) {
+        alert('Please log in to upload photos');
         return;
     }
 
     try {
-        if (!window.gapiInited || !window.gisInited) {
-            throw new Error('Google API not initialized. Please refresh the page.');
-        }
-
-        // Get valid token
-        const token = await getValidToken();
-
         // Upload to Google Drive
         const metadata = {
             name: `${currentTeam}_${currentTask}_${Date.now()}.jpg`,
@@ -592,92 +554,24 @@ async function savePhoto() {
         }
 
         // Update team data
-        const task = Object.values(tasks)
-            .flat()
-            .find(t => t.id === currentTask);
+        const teamData = await loadTeam(currentTeam);
+        const task = Object.values(tasks).flat().find(t => t.id === currentTask);
         
         teamData.points += task.points;
         teamData.completedTasks.push(currentTask);
         
-        // Save the updated team data
         if (await saveTeam(currentTeam, teamData)) {
-            // Update the points display
             document.getElementById('team-points').textContent = teamData.points;
-            // Return to game screen and refresh tasks
             showGameScreen();
             showTasks(currentLocation);
         }
     } catch (err) {
         console.error('Error in savePhoto:', err);
-        alert('Error saving photo: ' + err.message);
-    }
-}
-
-// Update UI elements based on login state
-function updateUIForLogin() {
-    const loginButton = document.getElementById('login-button');
-    const teamForm = document.querySelector('.team-form');
-    const loginMessage = document.getElementById('login-message');
-    
-    if (loginButton) {
-        loginButton.textContent = 'Logged In ✓';
-        loginButton.disabled = true;
-    }
-    if (teamForm) {
-        teamForm.style.display = 'flex';
-        console.log('Team form should be visible now');
-    } else {
-        console.error('Team form element not found');
-    }
-    if (loginMessage) {
-        loginMessage.style.display = 'none';
-    }
-}
-
-// Update UI elements for logged out state
-function updateUIForLogout() {
-    const loginButton = document.getElementById('login-button');
-    const teamForm = document.querySelector('.team-form');
-    const loginMessage = document.getElementById('login-message');
-    
-    if (loginButton) {
-        loginButton.textContent = 'Login with Google';
-        loginButton.disabled = false;
-    }
-    if (teamForm) {
-        teamForm.style.display = 'none';
-        console.log('Team form should be hidden now');
-    }
-    if (loginMessage) {
-        loginMessage.style.display = 'block';
-    }
-    
-    // Clear any stored team data
-    currentTeam = null;
-}
-
-// Get a valid token, either from storage or by requesting a new one
-async function getValidToken() {
-    const storedToken = getStoredToken();
-    if (storedToken) {
-        return storedToken;
-    }
-
-    return new Promise((resolve, reject) => {
-        try {
-            const currentCallback = window.tokenClient.callback;
-            window.tokenClient.callback = (response) => {
-                window.tokenClient.callback = currentCallback; // Restore original callback
-                if (response.error) {
-                    reject(response.error);
-                    return;
-                }
-                storeToken(response.access_token, response.expires_in);
-                resolve(response.access_token);
-            };
-            window.tokenClient.requestAccessToken({ prompt: '' });
-        } catch (error) {
-            reject(error);
+        if (err.message.includes('invalid_grant') || err.message.includes('Invalid Credentials')) {
+            alert('Your login has expired. Please log in again.');
+            logout();
+        } else {
+            alert('Error saving photo: ' + err.message);
         }
-    });
+    }
 } 
