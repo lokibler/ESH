@@ -270,9 +270,16 @@ header h2 {
 
 .camera-controls {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 8px;
     margin: 15px 0;
+}
+
+.top-controls {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.bottom-controls {
+    grid-template-columns: repeat(2, 1fr);
 }
 
 .camera-controls button {
@@ -362,13 +369,18 @@ header h2 {
         padding: 6px;
     }
     
-    .camera-controls {
-        grid-template-columns: repeat(2, 1fr);
+    .camera-controls button {
+        padding: 12px 8px;
+        font-size: 13px;
+        height: 44px;
     }
     
-    .camera-controls button {
-        padding: 10px;
-        font-size: 13px;
+    .camera-container {
+        margin: 10px auto;
+    }
+    
+    .camera-controls {
+        margin: 10px 0;
     }
 }
 
