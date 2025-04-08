@@ -457,11 +457,37 @@ function startPhoto(taskId) {
     showScreen('camera-screen');
 }
 
-// Retake the photo
-function retakePhoto() {
+// Cancel taking a photo and return to task list
+function cancelPhoto() {
     currentPhoto = null;
     document.getElementById('photo-preview').innerHTML = '';
     document.getElementById('camera-input').value = '';
+    document.getElementById('upload-input').value = '';
+    showGameScreen();
+    showTasks(currentLocation);
+}
+
+// Set up camera input handler
+document.getElementById('camera-input').addEventListener('change', function(e) {
+    handlePhotoInput(e.target.files[0]);
+});
+
+// Set up upload input handler
+document.getElementById('upload-input').addEventListener('change', function(e) {
+    handlePhotoInput(e.target.files[0]);
+});
+
+// Handle photo input from either camera or upload
+function handlePhotoInput(file) {
+    if (file) {
+        currentPhoto = file;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('photo-preview');
+            preview.innerHTML = `<img src="${e.target.result}" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+        };
+        reader.readAsDataURL(file);
+    }
 }
 
 // Save the photo and complete the task
@@ -542,29 +568,6 @@ async function savePhoto() {
         alert('Error saving photo: ' + err.message);
     }
 }
-
-// Cancel taking a photo and return to task list
-function cancelPhoto() {
-    currentPhoto = null;
-    document.getElementById('photo-preview').innerHTML = '';
-    document.getElementById('camera-input').value = '';
-    showGameScreen();
-    showTasks(currentLocation);
-}
-
-// Set up camera input handler
-document.getElementById('camera-input').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        currentPhoto = file;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const preview = document.getElementById('photo-preview');
-            preview.innerHTML = `<img src="${e.target.result}" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
-        };
-        reader.readAsDataURL(file);
-    }
-});
 
 // Update UI elements based on login state
 function updateUIForLogin() {

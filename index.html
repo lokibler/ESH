@@ -67,16 +67,17 @@
 
         <!-- Camera Screen -->
         <div id="camera-screen" class="screen">
-            <h3>📸 Take Photo</h3>
-            <div class="camera-container">
-                <div id="photo-preview"></div>
-            </div>
+            <h3>📸 Take or Upload Photo</h3>
             <div class="camera-controls">
                 <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none">
                 <button onclick="document.getElementById('camera-input').click()">Take Photo</button>
-                <button onclick="retakePhoto()">Retake</button>
+                <input type="file" id="upload-input" accept="image/*" style="display: none">
+                <button onclick="document.getElementById('upload-input').click()">Upload Photo</button>
                 <button onclick="savePhoto()">Save Photo</button>
                 <button onclick="cancelPhoto()" class="secondary-button">Cancel</button>
+            </div>
+            <div class="camera-container">
+                <div id="photo-preview"></div>
             </div>
         </div>
     </div>
