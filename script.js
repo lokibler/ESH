@@ -1,6 +1,6 @@
-// Version 1.8 - Silently refresh token (2024-04-09)
-console.log('=== Epcot Scavenger Hunt v1.8 ===');
-console.log('🎯 Changes: Silently refresh token');
+// Version 1.9 - Fixing login bug (2024-04-09)
+console.log('=== Epcot Scavenger Hunt v1.9 ===');
+console.log('🎯 Changes: Fixing login bug');
 console.log('⏰ Loaded at:', new Date().toLocaleTimeString());
 
 // Global variables
@@ -162,30 +162,6 @@ function storeToken(token, expiresIn) {
     localStorage.setItem('googleDriveToken', JSON.stringify({ token, expiresAt }));
 }
 
-// Get a valid token, either from storage or by requesting a new one
-async function getValidToken() {
-    const storedToken = getStoredToken();
-    if (storedToken) {
-        return storedToken;
-    }
-
-    return new Promise((resolve, reject) => {
-        try {
-            window.tokenClient.callback = (response) => {
-                if (response.error) {
-                    reject(response.error);
-                    return;
-                }
-                storeToken(response.access_token, response.expires_in);
-                resolve(response.access_token);
-            };
-            window.tokenClient.requestAccessToken();
-        } catch (error) {
-            reject(error);
-        }
-    });
-}
-
 // Initialize Google API
 async function initializeGoogleAPI() {
     try {
@@ -193,30 +169,13 @@ async function initializeGoogleAPI() {
             apiKey: API_KEY,
             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
         });
-        
+
+        // Set up token client with consistent callback
         window.tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/drive.file',
             prompt: '', // Don't force consent prompt if token exists
-            callback: async (resp) => {
-                if (resp.error) {
-                    console.error('Token client error:', resp.error);
-                    updateUIForLogout();
-                    return;
-                }
-                
-                // Store the new token
-                storeToken(resp.access_token, resp.expires_in);
-                isLoggedIn = true;
-                
-                // Update UI and show appropriate screen
-                updateUIForLogin();
-                if (currentTeam) {
-                    showGameScreen();
-                } else {
-                    showTeamForm();
-                }
-            }
+            callback: (resp) => handleTokenResponse(resp)
         });
 
         // Check for stored token and validate it
@@ -260,6 +219,27 @@ async function initializeGoogleAPI() {
         updateUIForLogout();
     } catch (error) {
         console.error('Error initializing Google API:', error);
+    }
+}
+
+// Handle token response in one place
+function handleTokenResponse(resp) {
+    if (resp.error) {
+        console.error('Token client error:', resp.error);
+        updateUIForLogout();
+        return;
+    }
+    
+    // Store the new token
+    storeToken(resp.access_token, resp.expires_in);
+    isLoggedIn = true;
+    
+    // Update UI and show appropriate screen
+    updateUIForLogin();
+    if (currentTeam) {
+        showGameScreen();
+    } else {
+        showTeamForm();
     }
 }
 
@@ -674,4 +654,30 @@ function updateUIForLogout() {
     
     // Clear any stored team data
     currentTeam = null;
+}
+
+// Get a valid token, either from storage or by requesting a new one
+async function getValidToken() {
+    const storedToken = getStoredToken();
+    if (storedToken) {
+        return storedToken;
+    }
+
+    return new Promise((resolve, reject) => {
+        try {
+            const currentCallback = window.tokenClient.callback;
+            window.tokenClient.callback = (response) => {
+                window.tokenClient.callback = currentCallback; // Restore original callback
+                if (response.error) {
+                    reject(response.error);
+                    return;
+                }
+                storeToken(response.access_token, response.expires_in);
+                resolve(response.access_token);
+            };
+            window.tokenClient.requestAccessToken({ prompt: '' });
+        } catch (error) {
+            reject(error);
+        }
+    });
 } 
